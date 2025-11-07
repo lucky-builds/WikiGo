@@ -1684,7 +1684,7 @@ export default function WikipediaJourneyGame() {
         {gameActive && articleHTML ? (
           <div className="flex flex-col lg:grid lg:grid-cols-[2fr,1.2fr,1.5fr] xl:grid-cols-[2.5fr,1.3fr,1.8fr] gap-3 sm:gap-4 lg:gap-4">
             {/* Left column: Full Wikipedia Article - Hidden on mobile by default */}
-            <div className={`space-y-3 sm:space-y-4 lg:space-y-4 order-6 lg:order-1 ${showArticleOnMobile ? 'block' : 'hidden'} lg:block`}>
+            <div className={`space-y-3 sm:space-y-4 lg:space-y-4 order-6 lg:order-1 ${showArticleOnMobile ? 'block' : 'hidden'} lg:block lg:min-w-0 lg:max-w-4xl xl:max-w-5xl`}>
               <Card className="shadow-sm lg:sticky lg:top-4">
                 <CardHeader className="p-3 sm:p-4 lg:p-4">
                   <div className="flex items-center justify-between">
@@ -3330,4 +3330,5 @@ export default function WikipediaJourneyGame() {
     </div>
   );
 }
+
 
