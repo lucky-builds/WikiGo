@@ -1,6 +1,6 @@
 // Game analytics tracking utilities
 
-import { supabase, GAME_ANALYTICS_TABLE } from './supabase';
+import { supabase, GAME_ANALYTICS_TABLE, LEADERBOARD_TABLE } from './supabase';
 import { getStoredUsername } from './username';
 
 /**
@@ -117,6 +117,47 @@ async function trackGameCompletionWithoutSession({ score, moves, timeMs, history
     return true;
   } catch (err) {
     console.error('Error tracking game completion (no session):', err);
+    return false;
+  }
+}
+
+/**
+ * Update username across all tables (leaderboard and game_analytics)
+ * This is called when a user changes their username
+ * @param {string} oldUsername - The old username to replace
+ * @param {string} newUsername - The new username
+ * @returns {Promise<boolean>} - Success status
+ */
+export async function updateUsernameAcrossTables(oldUsername, newUsername) {
+  if (!oldUsername || !newUsername || oldUsername === newUsername) {
+    return false;
+  }
+
+  try {
+    // Update leaderboard entries
+    const { error: leaderboardError } = await supabase
+      .from(LEADERBOARD_TABLE)
+      .update({ username: newUsername })
+      .eq('username', oldUsername);
+
+    if (leaderboardError) {
+      console.error('Error updating username in leaderboard:', leaderboardError);
+    }
+
+    // Update game_analytics entries
+    const { error: analyticsError } = await supabase
+      .from(GAME_ANALYTICS_TABLE)
+      .update({ username: newUsername })
+      .eq('username', oldUsername);
+
+    if (analyticsError) {
+      console.error('Error updating username in game_analytics:', analyticsError);
+    }
+
+    // Return true if at least one update succeeded (or if there were no errors)
+    return !leaderboardError && !analyticsError;
+  } catch (err) {
+    console.error('Error updating username across tables:', err);
     return false;
   }
 }
