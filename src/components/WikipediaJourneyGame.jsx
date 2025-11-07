@@ -3233,9 +3233,14 @@ export default function WikipediaJourneyGame() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10 min-w-[32px] sm:min-w-[40px]"
-                onClick={() => {
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10 min-w-[44px] min-h-[44px] z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
                   setShowChallengeScreen(false);
+                  setIsChallengeMode(false);
+                  setChallengeData(null);
+                  // Clear URL parameters
+                  window.history.replaceState({}, '', window.location.pathname);
                   // Show onboarding if needed after dismissing challenge
                   const hasSeenOnboarding = localStorage.getItem('wikiGo-onboarding-seen');
                   if (!hasSeenOnboarding) {
@@ -3380,19 +3385,26 @@ export default function WikipediaJourneyGame() {
             <div className="border-t p-4 sm:p-6 flex items-center justify-end gap-3 flex-shrink-0">
               <Button
                 variant="outline"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setShowChallengeScreen(false);
+                  setIsChallengeMode(false);
+                  setChallengeData(null);
+                  // Clear URL parameters
+                  window.history.replaceState({}, '', window.location.pathname);
                   // Show onboarding if needed after dismissing challenge
                   const hasSeenOnboarding = localStorage.getItem('wikiGo-onboarding-seen');
                   if (!hasSeenOnboarding) {
                     setShowOnboarding(true);
                   }
                 }}
+                className="min-h-[44px]"
               >
                 Decline
               </Button>
               <Button
-                onClick={async () => {
+                onClick={async (e) => {
+                  e.stopPropagation();
                   // Close challenge screen and set starting flag immediately
                   setShowChallengeScreen(false);
                   setStartingGame(true);
@@ -3406,7 +3418,7 @@ export default function WikipediaJourneyGame() {
                     setShowChallengeScreen(true);
                   }
                 }}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white min-h-[44px]"
               >
                 Accept Challenge
               </Button>
