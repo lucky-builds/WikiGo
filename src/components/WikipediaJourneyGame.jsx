@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Timer, Target, Shuffle, Flag, History, Trophy, Compass, X, ArrowLeft, Loader2, Calendar, Eye, EyeOff, PlayCircle, BookOpen, ArrowRight, CheckCircle2, ChevronRight, ChevronLeft, HelpCircle, Users } from "lucide-react";
+import { Timer, Target, Shuffle, Flag, History, Trophy, Compass, X, ArrowLeft, Loader2, Calendar, Eye, EyeOff, PlayCircle, BookOpen, ArrowRight, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, HelpCircle, Users, Share2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -689,6 +689,12 @@ export default function WikipediaJourneyGame() {
   const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
   const [scoreSubmitted, setScoreSubmitted] = useState(false);
   const [pendingSubmission, setPendingSubmission] = useState(false);
+  
+  // Challenge state
+  const [challengeData, setChallengeData] = useState(null);
+  const [showChallengeScreen, setShowChallengeScreen] = useState(false);
+  const [isChallengeMode, setIsChallengeMode] = useState(false);
+  const [showScoreBreakdown, setShowScoreBreakdown] = useState(false);
 
   // Progress heuristic: Jaccard similarity of words in titles (toy metric)
   const progress = useMemo(() => {
@@ -757,11 +763,22 @@ export default function WikipediaJourneyGame() {
     setError("");
     setGameActive(false);
     setShowArticleOnMobile(false);
+    setShowChallengeScreen(false); // Hide challenge screen when starting game
 
     try {
       let s, g;
       
-      if (dailyChallenge) {
+      // Check if we're in challenge mode
+      if (isChallengeMode && challengeData) {
+        // Use challenge articles
+        s = challengeData.start;
+        g = challengeData.end;
+        setStartTitle(s);
+        setGoalTitle(g);
+        setStartCategory("");
+        setGoalCategory("");
+        setDailyChallenge(false); // Challenge mode overrides daily challenge
+      } else if (dailyChallenge) {
         // Daily Challenge mode: use date-based deterministic selection
         const dailyArticles = await fetchDailyChallengeArticles();
         s = dailyArticles.startTitle;
@@ -804,7 +821,7 @@ export default function WikipediaJourneyGame() {
         const sessionId = await trackGameStart({
           startTitle: s,
           goalTitle: g,
-          isDailyChallenge: dailyChallenge,
+          isDailyChallenge: dailyChallenge && !isChallengeMode, // Don't track challenge as daily challenge
           startCategory: startCategory || null,
           goalCategory: goalCategory || null,
         });
@@ -822,7 +839,7 @@ export default function WikipediaJourneyGame() {
 
   function resetGame() {
     setStartingGame(false);
-    if (!dailyChallenge) {
+    if (!dailyChallenge && !isChallengeMode) {
     setStartTitle("");
     setGoalTitle("");
     setStartCategory("");
@@ -843,7 +860,16 @@ export default function WikipediaJourneyGame() {
     setShowArticleOnMobile(false);
     setScoreSubmitted(false);
     setPendingSubmission(false);
+    setShowScoreBreakdown(false); // Reset score breakdown collapse state
     gameSessionId.current = null; // Reset game session ID
+    // Clear challenge data and URL params on reset
+    if (isChallengeMode) {
+      setChallengeData(null);
+      setIsChallengeMode(false);
+      setShowChallengeScreen(false);
+      // Clear URL parameters
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     // Reset daily challenge loaded ref when resetting in daily challenge mode
     if (dailyChallenge) {
       dailyChallengeLoadedRef.current = false;
@@ -908,10 +934,15 @@ export default function WikipediaJourneyGame() {
   // Check if onboarding has been shown before
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('wikiGo-onboarding-seen');
-    if (!hasSeenOnboarding) {
+    // Show challenge screen first if challenge params exist, then onboarding if needed
+    if (challengeData && !hasSeenOnboarding) {
+      // Delay onboarding until after challenge screen is dismissed
+      return;
+    }
+    if (!hasSeenOnboarding && !challengeData) {
       setShowOnboarding(true);
     }
-  }, []);
+  }, [challengeData]);
 
   // Initialize username on mount
   useEffect(() => {
@@ -924,6 +955,42 @@ export default function WikipediaJourneyGame() {
       setUsername(newUsername);
     }
   }, []);
+
+  // Parse challenge URL parameters on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const challengeStart = params.get('start');
+    const challengeEnd = params.get('end');
+    const challengeMoves = params.get('moves');
+    const challengeTime = params.get('time');
+    const challengeScore = params.get('score');
+    const challengeUsername = params.get('username');
+
+    // Validate all required challenge parameters exist
+    if (challengeStart && challengeEnd && challengeMoves && challengeTime && challengeScore && challengeUsername) {
+      const data = {
+        start: decodeURIComponent(challengeStart),
+        end: decodeURIComponent(challengeEnd),
+        moves: parseInt(challengeMoves, 10),
+        time: parseInt(challengeTime, 10), // time in seconds
+        score: parseInt(challengeScore, 10),
+        username: decodeURIComponent(challengeUsername),
+      };
+
+      // Validate numeric values
+      if (!isNaN(data.moves) && !isNaN(data.time) && !isNaN(data.score) && data.moves >= 0 && data.time >= 0 && data.score >= 0) {
+        setChallengeData(data);
+        setIsChallengeMode(true);
+      }
+    }
+  }, []); // Only run on mount
+
+  // Show challenge screen when challenge data is available and game is not active
+  useEffect(() => {
+    if (challengeData && isChallengeMode && !gameActive && !won && !showChallengeScreen && !showOnboarding && !startingGame) {
+      setShowChallengeScreen(true);
+    }
+  }, [challengeData, isChallengeMode, gameActive, won, showChallengeScreen, showOnboarding, startingGame]);
 
   // Update document title based on game state
   useEffect(() => {
@@ -2642,9 +2709,15 @@ export default function WikipediaJourneyGame() {
             <CardHeader className="relative bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-400 text-white p-4 sm:p-6">
               <div className="flex items-center justify-center gap-2 sm:gap-3">
                 <Trophy className="h-6 w-6 sm:h-8 sm:w-8" />
-                <CardTitle className="text-2xl sm:text-3xl">Congratulations!</CardTitle>
+                <CardTitle className="text-2xl sm:text-3xl">
+                  {isChallengeMode ? "Challenge Complete!" : "Congratulations!"}
+                </CardTitle>
               </div>
-              <p className="text-center mt-1 sm:mt-2 text-yellow-50 text-sm sm:text-base">You've reached your destination!</p>
+              <p className="text-center mt-1 sm:mt-2 text-yellow-50 text-sm sm:text-base">
+                {isChallengeMode 
+                  ? "You've completed the challenge!" 
+                  : "You've reached your destination!"}
+              </p>
               <Button
                 variant="ghost"
                 size="icon"
@@ -2704,6 +2777,164 @@ export default function WikipediaJourneyGame() {
                   </div>
                 </div>
               </div>
+
+              {/* Primary CTA: Challenge Button */}
+              <div className="space-y-2 sm:space-y-3">
+                <Button
+                  onClick={() => {
+                    // Generate challenge URL with all game data
+                    const baseUrl = window.location.origin + window.location.pathname;
+                    const challengeUrl = `${baseUrl}?start=${encodeURIComponent(startTitle)}&end=${encodeURIComponent(goalTitle)}&moves=${moveCount}&time=${Math.floor(finalTime.current / 1000)}&score=${finalScore}&username=${encodeURIComponent(username)}`;
+                    
+                    const shareText = `${username} challenged you to beat their WikiGo score! Can you navigate from "${startTitle}" to "${goalTitle}" faster? Score: ${finalScore} in ${moveCount} moves and ${prettyTime(finalTime.current)}. Accept the challenge: ${challengeUrl}`;
+                    
+                    if (navigator.share) {
+                      navigator.share({ 
+                        title: "WikiGo Challenge",
+                        text: shareText,
+                        url: challengeUrl
+                      }).catch(() => {
+                        // Fallback to clipboard if share is cancelled
+                        navigator.clipboard.writeText(challengeUrl);
+                        alert("Challenge URL copied to clipboard!");
+                      });
+                    } else {
+                      navigator.clipboard.writeText(challengeUrl);
+                      alert("Challenge URL copied to clipboard!");
+                    }
+                  }}
+                  className={`w-full h-12 sm:h-14 md:h-16 text-base sm:text-lg md:text-xl font-semibold shadow-lg transition-all hover:scale-105 ${
+                    theme === 'dark'
+                      ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white'
+                      : theme === 'classic'
+                      ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white border-2 border-black'
+                      : 'bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white'
+                  }`}
+                >
+                  <Share2 className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
+                  Challenge a Friend!
+                </Button>
+                <p className={`text-center text-xs sm:text-sm ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
+                }`}>
+                  Share your victory and challenge someone to beat your score!
+                </p>
+              </div>
+
+              {/* Challenge Comparison */}
+              {isChallengeMode && challengeData && (
+                <div className={`p-4 sm:p-6 rounded-lg border-2 ${
+                  finalScore > challengeData.score
+                    ? theme === 'dark'
+                      ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-600'
+                      : theme === 'classic'
+                      ? 'bg-green-50 border-green-600 border-4'
+                      : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-400'
+                    : finalScore === challengeData.score
+                    ? theme === 'dark'
+                      ? 'bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border-yellow-600'
+                      : theme === 'classic'
+                      ? 'bg-yellow-50 border-yellow-600 border-4'
+                      : 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-400'
+                    : theme === 'dark'
+                    ? 'bg-gradient-to-br from-red-900/30 to-pink-900/30 border-red-600'
+                    : theme === 'classic'
+                    ? 'bg-red-50 border-red-600 border-4'
+                    : 'bg-gradient-to-br from-red-50 to-pink-50 border-red-400'
+                }`}>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    {finalScore > challengeData.score ? (
+                      <Trophy className={`h-5 w-5 sm:h-6 sm:w-6 ${
+                        theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                      }`} />
+                    ) : finalScore === challengeData.score ? (
+                      <Target className={`h-5 w-5 sm:h-6 sm:w-6 ${
+                        theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
+                      }`} />
+                    ) : (
+                      <Flag className={`h-5 w-5 sm:h-6 sm:w-6 ${
+                        theme === 'dark' ? 'text-red-400' : 'text-red-600'
+                      }`} />
+                    )}
+                    <h3 className={`font-semibold text-base sm:text-lg ${
+                      finalScore > challengeData.score
+                        ? theme === 'dark' ? 'text-green-200' : 'text-green-900'
+                        : finalScore === challengeData.score
+                        ? theme === 'dark' ? 'text-yellow-200' : 'text-yellow-900'
+                        : theme === 'dark' ? 'text-red-200' : 'text-red-900'
+                    }`}>
+                      {finalScore > challengeData.score
+                        ? `🎉 You Won! You beat ${challengeData.username}!`
+                        : finalScore === challengeData.score
+                        ? `🤝 It's a Tie! You matched ${challengeData.username}'s score!`
+                        : `😔 You Lost! ${challengeData.username} beat you!`}
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className={`p-3 sm:p-4 rounded-lg ${
+                      theme === 'dark' ? 'bg-gray-800/50' : theme === 'classic' ? 'bg-white border border-slate-300' : 'bg-white/50'
+                    }`}>
+                      <div className={`text-xs sm:text-sm font-semibold mb-2 ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
+                      }`}>
+                        {challengeData.username}'s Score
+                      </div>
+                      <div className={`text-2xl sm:text-3xl font-bold ${
+                        theme === 'dark' ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        {challengeData.score}
+                      </div>
+                      <div className={`text-xs mt-1 ${
+                        theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
+                      }`}>
+                        {challengeData.moves} moves • {prettyTime(challengeData.time * 1000)}
+                      </div>
+                    </div>
+                    <div className={`p-3 sm:p-4 rounded-lg border-2 ${
+                      finalScore > challengeData.score
+                        ? theme === 'dark'
+                          ? 'bg-green-800/50 border-green-500'
+                          : theme === 'classic'
+                          ? 'bg-green-100 border-green-600'
+                          : 'bg-green-100 border-green-400'
+                        : theme === 'dark'
+                        ? 'bg-gray-800/50 border-gray-600'
+                        : theme === 'classic'
+                        ? 'bg-white border-slate-400'
+                        : 'bg-white/50 border-slate-300'
+                    }`}>
+                      <div className={`text-xs sm:text-sm font-semibold mb-2 ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
+                      }`}>
+                        Your Score
+                      </div>
+                      <div className={`text-2xl sm:text-3xl font-bold ${
+                        finalScore > challengeData.score
+                          ? theme === 'dark' ? 'text-green-300' : 'text-green-700'
+                          : theme === 'dark' ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        {finalScore}
+                      </div>
+                      <div className={`text-xs mt-1 ${
+                        theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
+                      }`}>
+                        {moveCount} moves • {prettyTime(finalTime.current)}
+                      </div>
+                    </div>
+                  </div>
+                  {finalScore < challengeData.score && (
+                    <div className={`mt-3 sm:mt-4 p-2 sm:p-3 rounded-lg ${
+                      theme === 'dark' ? 'bg-gray-800/50' : 'bg-white/50'
+                    }`}>
+                      <p className={`text-xs sm:text-sm ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-slate-700'
+                      }`}>
+                        💪 Don't give up! Try again to beat {challengeData.username}'s score of {challengeData.score}!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Journey Path */}
               <div>
@@ -2768,55 +2999,78 @@ export default function WikipediaJourneyGame() {
                 </div>
               </div>
 
-              {/* Score Breakdown */}
-              <div className={`p-3 sm:p-4 rounded-lg border ${
+              {/* Score Breakdown - Collapsible */}
+              <div className={`rounded-lg border ${
                 theme === 'dark'
                   ? 'bg-slate-800 border-slate-700'
                   : theme === 'classic'
                   ? 'bg-slate-50 border-slate-400'
                   : 'bg-slate-50 border-slate-200'
               }`}>
-                <h3 className={`font-semibold mb-2 sm:mb-3 text-sm sm:text-base ${
-                  theme === 'dark' ? 'text-white' : 'text-slate-900'
-                }`}>
-                  Score Breakdown
-                </h3>
-                <div className={`space-y-1.5 sm:space-y-2 text-xs sm:text-sm ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-slate-700'
-                }`}>
-                  {(() => {
-                    const timeToUse = finalTime.current > 0 ? finalTime.current : timer;
-                    const seconds = Math.floor(timeToUse / 1000);
-                    const movesPenalty = 10 * moveCount;
-                    const timePenalty = seconds;
-                    return (
-                      <>
-                        <div className="flex justify-between">
-                          <span>Base score:</span>
-                          <span className="font-semibold">1000</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Moves penalty (10 × {moveCount}):</span>
-                          <span className="font-semibold text-red-600 dark:text-red-400">-{movesPenalty}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Time penalty (1 × {seconds}s):</span>
-                          <span className="font-semibold text-red-600 dark:text-red-400">-{timePenalty}</span>
-                        </div>
-                        <div className={`border-t pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 flex justify-between ${
-                          theme === 'dark' ? 'border-gray-700' : 'border-slate-300'
-                        }`}>
-                          <span className="font-semibold">Final Score:</span>
-                          <span className={`font-bold text-base sm:text-lg ${
-                            theme === 'dark' ? 'text-white' : 'text-slate-900'
+                <button
+                  onClick={() => setShowScoreBreakdown(!showScoreBreakdown)}
+                  className={`w-full flex items-center justify-between p-3 sm:p-4 text-left hover:opacity-80 transition-opacity ${
+                    theme === 'dark' ? 'text-white' : 'text-slate-900'
+                  }`}
+                >
+                  <h3 className={`font-semibold text-sm sm:text-base flex items-center gap-2 ${
+                    theme === 'dark' ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    <History className="h-4 w-4" />
+                    Score Breakdown
+                  </h3>
+                  {showScoreBreakdown ? (
+                    <ChevronUp className={`h-4 w-4 sm:h-5 sm:w-5 ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
+                    }`} />
+                  ) : (
+                    <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
+                    }`} />
+                  )}
+                </button>
+                {showScoreBreakdown && (
+                  <div className={`px-3 sm:px-4 pb-3 sm:pb-4 pt-0 space-y-1.5 sm:space-y-2 text-xs sm:text-sm ${
+                    theme === 'dark' ? 'text-gray-200' : 'text-slate-700'
+                  }`}>
+                    {(() => {
+                      const timeToUse = finalTime.current > 0 ? finalTime.current : timer;
+                      const seconds = Math.floor(timeToUse / 1000);
+                      const movesPenalty = 10 * moveCount;
+                      const timePenalty = seconds;
+                      return (
+                        <>
+                          <div className="flex justify-between">
+                            <span>Base score:</span>
+                            <span className="font-semibold">1000</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Moves penalty (10 × {moveCount}):</span>
+                            <span className={`font-semibold ${
+                              theme === 'dark' ? 'text-red-400' : 'text-red-600'
+                            }`}>-{movesPenalty}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Time penalty (1 × {seconds}s):</span>
+                            <span className={`font-semibold ${
+                              theme === 'dark' ? 'text-red-400' : 'text-red-600'
+                            }`}>-{timePenalty}</span>
+                          </div>
+                          <div className={`border-t pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 flex justify-between ${
+                            theme === 'dark' ? 'border-gray-700' : 'border-slate-300'
                           }`}>
-                            {finalScore}
-                          </span>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
+                            <span className="font-semibold">Final Score:</span>
+                            <span className={`font-bold text-base sm:text-lg ${
+                              theme === 'dark' ? 'text-white' : 'text-slate-900'
+                            }`}>
+                              {finalScore}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
 
               {/* Daily Challenge Leaderboard Section */}
@@ -2915,21 +3169,21 @@ export default function WikipediaJourneyGame() {
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Button className="flex-1 h-10 sm:h-11 text-sm sm:text-base" onClick={resetGame}>
+              {/* Secondary CTA: Play Again Button */}
+              <div className="pt-2">
+                <Button 
+                  variant="outline" 
+                  className={`w-full h-10 sm:h-11 text-sm sm:text-base ${
+                    theme === 'dark'
+                      ? 'border-gray-600 hover:bg-gray-800'
+                      : theme === 'classic'
+                      ? 'border-black hover:bg-slate-100'
+                      : 'border-slate-300 hover:bg-slate-100'
+                  }`}
+                  onClick={resetGame}
+                >
+                  <PlayCircle className="h-4 w-4 mr-2" />
                   Play Again
-                </Button>
-                <Button variant="outline" className="flex-1 h-10 sm:h-11 text-sm sm:text-base" onClick={() => {
-                  const text = `I completed the WikiGo challenge from "${startTitle}" to "${goalTitle}" in ${moveCount} moves and ${prettyTime(finalTime.current)}! Score: ${finalScore}`;
-                  if (navigator.share) {
-                    navigator.share({ text, title: "WikiGo" });
-                  } else {
-                    navigator.clipboard.writeText(text);
-                    alert("Results copied to clipboard!");
-                  }
-                }}>
-                  Share Results
                 </Button>
               </div>
             </CardContent>
@@ -2958,6 +3212,203 @@ export default function WikipediaJourneyGame() {
                 </p>
               </div>
             </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Challenge Screen Modal */}
+      {showChallengeScreen && challengeData && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+            <CardHeader className="relative bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white p-4 sm:p-6">
+              <div className="flex items-center justify-center gap-2 sm:gap-3">
+                <Trophy className="h-6 w-6 sm:h-8 sm:w-8" />
+                <CardTitle className="text-2xl sm:text-3xl">Challenge Accepted!</CardTitle>
+              </div>
+              <p className="text-center mt-1 sm:mt-2 text-white/90 text-sm sm:text-base">
+                {challengeData.username} has challenged you to a duel!
+              </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10 min-w-[32px] sm:min-w-[40px]"
+                onClick={() => {
+                  setShowChallengeScreen(false);
+                  // Show onboarding if needed after dismissing challenge
+                  const hasSeenOnboarding = localStorage.getItem('wikiGo-onboarding-seen');
+                  if (!hasSeenOnboarding) {
+                    setShowOnboarding(true);
+                  }
+                }}
+              >
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* Challenge Info */}
+              <div className={`p-4 sm:p-6 rounded-lg border-2 ${
+                theme === 'dark'
+                  ? 'bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-600'
+                  : theme === 'classic'
+                  ? 'bg-white border-black'
+                  : 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300'
+              }`}>
+                <h3 className={`font-semibold text-lg sm:text-xl mb-3 sm:mb-4 ${
+                  theme === 'dark' ? 'text-white' : 'text-slate-900'
+                }`}>
+                  Beat This Score!
+                </h3>
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className={`text-center p-2 sm:p-3 rounded-lg ${
+                    theme === 'dark' ? 'bg-gray-800' : theme === 'classic' ? 'bg-slate-100 border border-slate-300' : 'bg-slate-50'
+                  }`}>
+                    <div className={`text-xl sm:text-2xl font-bold ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>
+                      {challengeData.moves}
+                    </div>
+                    <div className={`text-xs sm:text-sm mt-1 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
+                    }`}>
+                      Moves
+                    </div>
+                  </div>
+                  <div className={`text-center p-2 sm:p-3 rounded-lg ${
+                    theme === 'dark' ? 'bg-gray-800' : theme === 'classic' ? 'bg-slate-100 border border-slate-300' : 'bg-slate-50'
+                  }`}>
+                    <div className={`text-xl sm:text-2xl font-bold ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>
+                      {prettyTime(challengeData.time * 1000)}
+                    </div>
+                    <div className={`text-xs sm:text-sm mt-1 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
+                    }`}>
+                      Time
+                    </div>
+                  </div>
+                  <div className={`text-center p-2 sm:p-3 rounded-lg border-2 ${
+                    theme === 'dark'
+                      ? 'bg-gradient-to-br from-yellow-900/50 to-orange-900/50 border-yellow-600'
+                      : theme === 'classic'
+                      ? 'bg-gradient-to-br from-yellow-100 to-orange-100 border-yellow-500'
+                      : 'bg-gradient-to-br from-yellow-100 to-orange-100 border-yellow-300'
+                  }`}>
+                    <div className={`text-xl sm:text-2xl font-bold ${
+                      theme === 'dark' ? 'text-yellow-200' : 'text-slate-900'
+                    }`}>
+                      {challengeData.score}
+                    </div>
+                    <div className={`text-xs sm:text-sm mt-1 ${
+                      theme === 'dark' ? 'text-yellow-300' : 'text-slate-600'
+                    }`}>
+                      Score
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Challenge Articles */}
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className={`font-semibold text-base sm:text-lg ${
+                  theme === 'dark' ? 'text-white' : 'text-slate-900'
+                }`}>
+                  Your Challenge:
+                </h3>
+                <div className="space-y-2 sm:space-y-3">
+                  <div className={`p-3 sm:p-4 rounded-lg border-2 ${
+                    theme === 'dark'
+                      ? 'bg-blue-900/30 border-blue-600'
+                      : theme === 'classic'
+                      ? 'bg-blue-50 border-blue-500'
+                      : 'bg-blue-50 border-blue-300'
+                  }`}>
+                    <div className={`text-xs sm:text-sm font-semibold mb-1 ${
+                      theme === 'dark' ? 'text-blue-300' : 'text-blue-700'
+                    }`}>
+                      Start Article
+                    </div>
+                    <div className={`text-sm sm:text-base font-medium ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>
+                      {challengeData.start}
+                    </div>
+                  </div>
+                  <div className="flex justify-center">
+                    <ArrowRight className={`h-5 w-5 sm:h-6 sm:w-6 ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
+                    }`} />
+                  </div>
+                  <div className={`p-3 sm:p-4 rounded-lg border-2 ${
+                    theme === 'dark'
+                      ? 'bg-green-900/30 border-green-600'
+                      : theme === 'classic'
+                      ? 'bg-green-50 border-green-500'
+                      : 'bg-green-50 border-green-300'
+                  }`}>
+                    <div className={`text-xs sm:text-sm font-semibold mb-1 ${
+                      theme === 'dark' ? 'text-green-300' : 'text-green-700'
+                    }`}>
+                      End Article
+                    </div>
+                    <div className={`text-sm sm:text-base font-medium ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>
+                      {challengeData.end}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className={`p-3 sm:p-4 rounded-lg border ${
+                theme === 'dark'
+                  ? 'bg-slate-800 border-slate-700'
+                  : theme === 'classic'
+                  ? 'bg-slate-50 border-slate-400'
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
+                <p className={`text-xs sm:text-sm ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-slate-700'
+                }`}>
+                  Navigate from <strong>{challengeData.start}</strong> to <strong>{challengeData.end}</strong> in fewer moves or less time to beat {challengeData.username}'s score of <strong>{challengeData.score}</strong>!
+                </p>
+              </div>
+            </CardContent>
+            <div className="border-t p-4 sm:p-6 flex items-center justify-end gap-3 flex-shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowChallengeScreen(false);
+                  // Show onboarding if needed after dismissing challenge
+                  const hasSeenOnboarding = localStorage.getItem('wikiGo-onboarding-seen');
+                  if (!hasSeenOnboarding) {
+                    setShowOnboarding(true);
+                  }
+                }}
+              >
+                Decline
+              </Button>
+              <Button
+                onClick={async () => {
+                  // Close challenge screen and set starting flag immediately
+                  setShowChallengeScreen(false);
+                  setStartingGame(true);
+                  try {
+                    await startGame();
+                  } catch (err) {
+                    console.error('Error starting challenge game:', err);
+                    setError("Failed to start challenge. Please try again.");
+                    setStartingGame(false);
+                    // Re-show challenge screen if there was an error
+                    setShowChallengeScreen(true);
+                  }
+                }}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+              >
+                Accept Challenge
+              </Button>
+            </div>
           </Card>
         </div>
       )}
