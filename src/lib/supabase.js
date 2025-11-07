@@ -14,4 +14,7 @@ export const LEADERBOARD_TABLE = 'leaderboard'
 // Daily challenges table name
 export const DAILY_CHALLENGES_TABLE = 'daily_challenges'
 
+// Game analytics table name
+export const GAME_ANALYTICS_TABLE = 'game_analytics'
+
 
