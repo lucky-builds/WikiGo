@@ -945,9 +945,11 @@ export default function WikipediaJourneyGame() {
   // Calculate score: 1000 − (10 × moves) − (1 × seconds)
   const finalScore = useMemo(() => {
     if (!won) return 0;
-    const seconds = Math.floor(finalTime.current / 1000);
+    // Use finalTime.current if set, otherwise use current timer value
+    const timeToUse = finalTime.current > 0 ? finalTime.current : timer;
+    const seconds = Math.floor(timeToUse / 1000);
     return Math.max(0, 1000 - (10 * moveCount) - seconds);
-  }, [won, moveCount]);
+  }, [won, moveCount, timer]);
 
   // Trigger confetti when game is won
   useEffect(() => {
@@ -2692,28 +2694,38 @@ export default function WikipediaJourneyGame() {
                 <div className={`space-y-1.5 sm:space-y-2 text-xs sm:text-sm ${
                   theme === 'dark' ? 'text-gray-200' : 'text-slate-700'
                 }`}>
-                  <div className="flex justify-between">
-                    <span>Base score:</span>
-                    <span className="font-semibold">1000</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Moves penalty (10 × {moveCount}):</span>
-                    <span className="font-semibold text-red-600 dark:text-red-400">-{10 * moveCount}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Time penalty (1 × {Math.floor(finalTime.current / 1000)}s):</span>
-                    <span className="font-semibold text-red-600 dark:text-red-400">-{Math.floor(finalTime.current / 1000)}</span>
-                  </div>
-                  <div className={`border-t pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 flex justify-between ${
-                    theme === 'dark' ? 'border-gray-700' : 'border-slate-300'
-                  }`}>
-                    <span className="font-semibold">Final Score:</span>
-                    <span className={`font-bold text-base sm:text-lg ${
-                      theme === 'dark' ? 'text-white' : 'text-slate-900'
-                    }`}>
-                      {finalScore}
-                    </span>
-                  </div>
+                  {(() => {
+                    const timeToUse = finalTime.current > 0 ? finalTime.current : timer;
+                    const seconds = Math.floor(timeToUse / 1000);
+                    const movesPenalty = 10 * moveCount;
+                    const timePenalty = seconds;
+                    return (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Base score:</span>
+                          <span className="font-semibold">1000</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Moves penalty (10 × {moveCount}):</span>
+                          <span className="font-semibold text-red-600 dark:text-red-400">-{movesPenalty}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Time penalty (1 × {seconds}s):</span>
+                          <span className="font-semibold text-red-600 dark:text-red-400">-{timePenalty}</span>
+                        </div>
+                        <div className={`border-t pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 flex justify-between ${
+                          theme === 'dark' ? 'border-gray-700' : 'border-slate-300'
+                        }`}>
+                          <span className="font-semibold">Final Score:</span>
+                          <span className={`font-bold text-base sm:text-lg ${
+                            theme === 'dark' ? 'text-white' : 'text-slate-900'
+                          }`}>
+                            {finalScore}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
