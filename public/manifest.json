@@ -1,0 +1,19 @@
+{
+  "name": "WikiGo - Wikipedia Navigation Game",
+  "short_name": "WikiGo",
+  "description": "Navigate Wikipedia articles in the fewest moves. Daily challenges and leaderboard.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

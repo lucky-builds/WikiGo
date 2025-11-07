@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="url(#grad)" stroke="#1e293b" stroke-width="2"/>
+  <!-- Compass icon -->
+  <g transform="translate(50, 50)">
+    <!-- Compass needle pointing up-right -->
+    <line x1="0" y1="-20" x2="0" y2="20" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="-20" y1="0" x2="20" y2="0" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+    <!-- Center dot -->
+    <circle cx="0" cy="0" r="4" fill="#ffffff"/>
+    <!-- N indicator -->
+    <text x="0" y="-30" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">N</text>
+  </g>
+</svg>
+
