@@ -671,7 +671,7 @@ export default function WikipediaJourneyGame() {
   const [error, setError] = useState("");
   const [gameActive, setGameActive] = useState(false);
   const [won, setWon] = useState(false);
-  const [dailyChallenge, setDailyChallenge] = useState(false); // Default to Random Game
+  const [dailyChallenge, setDailyChallenge] = useState(true); // Default to Daily Challenge
   const [timeUntilReset, setTimeUntilReset] = useState(getTimeUntilMidnight());
   const timer = useTimer(gameActive && !won);
   const dailyChallengeLoadedRef = useRef(false);
