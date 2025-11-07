@@ -7,6 +7,22 @@
     --radius: 0.5rem;
   }
   
+  /* Safe area insets for mobile devices (iPhone notch/home indicator) */
+  .safe-area-inset {
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  
+  .pt-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+  
   /* Classic Wikipedia Mode Styles - Old School Black & White */
   .classic {
     font-family: 'Times New Roman', Times, serif;
