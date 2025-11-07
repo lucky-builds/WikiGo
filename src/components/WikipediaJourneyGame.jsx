@@ -2707,14 +2707,14 @@ export default function WikipediaJourneyGame() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-2 md:p-4 safe-area-inset">
           <div className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl flex flex-col sm:rounded-lg shadow-2xl overflow-hidden">
             <Card className="flex flex-col h-full sm:h-auto overflow-hidden">
-              <CardHeader className="relative bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-400 text-white p-4 sm:p-6 flex-shrink-0">
-                <div className="flex items-center justify-center gap-2 sm:gap-3">
-                  <Trophy className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
-                  <CardTitle className="text-xl sm:text-2xl md:text-3xl">
+              <CardHeader className="relative bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-400 text-white p-3 sm:p-4 md:p-6 flex-shrink-0">
+                <div className="flex items-center justify-center gap-1.5 sm:gap-2 md:gap-3">
+                  <Trophy className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-8 lg:w-8" />
+                  <CardTitle className="text-lg sm:text-xl md:text-2xl lg:text-3xl">
                     {isChallengeMode ? "Challenge Complete!" : "Congratulations!"}
                   </CardTitle>
                 </div>
-                <p className="text-center mt-1 sm:mt-2 text-yellow-50 text-xs sm:text-sm md:text-base">
+                <p className="text-center mt-1 text-yellow-50 text-[11px] sm:text-xs md:text-sm lg:text-base">
                   {isChallengeMode 
                     ? "You've completed the challenge!" 
                     : "You've reached your destination!"}
@@ -2722,56 +2722,56 @@ export default function WikipediaJourneyGame() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10 min-w-[44px] min-h-[44px]"
+                  className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 md:top-4 md:right-4 text-white hover:bg-white/20 h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10 min-w-[44px] min-h-[44px]"
                   onClick={resetGame}
                 >
-                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
                 </Button>
               </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6 pb-safe">
+              <CardContent className="flex-1 overflow-y-auto p-2.5 sm:p-3 md:p-4 lg:p-6 space-y-2.5 sm:space-y-3 md:space-y-4 lg:space-y-6 pb-safe">
               {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-1.5 sm:gap-2 md:gap-3 lg:gap-4">
-                <div className={`text-center p-1.5 sm:p-2 md:p-3 lg:p-4 rounded-lg ${
+              <div className="grid grid-cols-3 gap-1 sm:gap-1.5 md:gap-2 lg:gap-3 xl:gap-4">
+                <div className={`text-center p-1 sm:p-1.5 md:p-2 lg:p-3 xl:p-4 rounded-lg ${
                   theme === 'dark' ? 'bg-gray-800' : theme === 'classic' ? 'bg-slate-100 border border-slate-300' : 'bg-slate-50'
                 }`}>
-                  <div className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold ${
+                  <div className={`text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold ${
                     theme === 'dark' ? 'text-white' : 'text-slate-900'
                   }`}>
                     {moveCount}
                 </div>
-                  <div className={`text-[10px] sm:text-xs md:text-sm mt-0.5 sm:mt-1 ${
+                  <div className={`text-[9px] sm:text-[10px] md:text-xs lg:text-sm mt-0.5 ${
                     theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
                   }`}>
                     Moves
                 </div>
                 </div>
-                <div className={`text-center p-1.5 sm:p-2 md:p-3 lg:p-4 rounded-lg ${
+                <div className={`text-center p-1 sm:p-1.5 md:p-2 lg:p-3 xl:p-4 rounded-lg ${
                   theme === 'dark' ? 'bg-gray-800' : theme === 'classic' ? 'bg-slate-100 border border-slate-300' : 'bg-slate-50'
                 }`}>
-                  <div className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold ${
+                  <div className={`text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold ${
                     theme === 'dark' ? 'text-white' : 'text-slate-900'
                   }`}>
                     {prettyTime(finalTime.current)}
                   </div>
-                  <div className={`text-[10px] sm:text-xs md:text-sm mt-0.5 sm:mt-1 ${
+                  <div className={`text-[9px] sm:text-[10px] md:text-xs lg:text-sm mt-0.5 ${
                     theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
                   }`}>
                     Time
                   </div>
                 </div>
-                <div className={`text-center p-1.5 sm:p-2 md:p-3 lg:p-4 rounded-lg border-2 ${
+                <div className={`text-center p-1 sm:p-1.5 md:p-2 lg:p-3 xl:p-4 rounded-lg border-2 ${
                   theme === 'dark'
                     ? 'bg-gradient-to-br from-yellow-900/50 to-orange-900/50 border-yellow-600'
                     : theme === 'classic'
                     ? 'bg-gradient-to-br from-yellow-100 to-orange-100 border-yellow-500'
                     : 'bg-gradient-to-br from-yellow-100 to-orange-100 border-yellow-300'
                 }`}>
-                  <div className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold ${
+                  <div className={`text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold ${
                     theme === 'dark' ? 'text-yellow-200' : 'text-slate-900'
                   }`}>
                     {finalScore}
                   </div>
-                  <div className={`text-[10px] sm:text-xs md:text-sm mt-0.5 sm:mt-1 ${
+                  <div className={`text-[9px] sm:text-[10px] md:text-xs lg:text-sm mt-0.5 ${
                     theme === 'dark' ? 'text-yellow-300' : 'text-slate-600'
                   }`}>
                     Score
@@ -2780,7 +2780,7 @@ export default function WikipediaJourneyGame() {
               </div>
 
               {/* Primary CTA: Challenge Button */}
-              <div className="space-y-1.5 sm:space-y-2 md:space-y-3">
+              <div className="space-y-1 sm:space-y-1.5 md:space-y-2 lg:space-y-3">
                 <Button
                   onClick={() => {
                     // Generate challenge URL with all game data
@@ -2804,7 +2804,7 @@ export default function WikipediaJourneyGame() {
                       alert("Challenge URL copied to clipboard!");
                     }
                   }}
-                  className={`w-full h-11 sm:h-12 md:h-14 lg:h-16 text-sm sm:text-base md:text-lg lg:text-xl font-semibold shadow-lg transition-all hover:scale-105 min-h-[44px] ${
+                  className={`w-full h-10 sm:h-11 md:h-12 lg:h-14 xl:h-16 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-semibold shadow-lg transition-all hover:scale-105 min-h-[44px] ${
                     theme === 'dark'
                       ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white'
                       : theme === 'classic'
@@ -2812,10 +2812,10 @@ export default function WikipediaJourneyGame() {
                       : 'bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white'
                   }`}
                 >
-                  <Share2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-1.5 sm:mr-2" />
+                  <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 mr-1 sm:mr-1.5 md:mr-2" />
                   Challenge a Friend!
                 </Button>
-                <p className={`text-center text-[10px] sm:text-xs md:text-sm ${
+                <p className={`text-center text-[9px] sm:text-[10px] md:text-xs lg:text-sm ${
                   theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
                 }`}>
                   Share your victory and challenge someone to beat your score!
