@@ -849,6 +849,61 @@ export default function WikipediaJourneyGame() {
       dailyChallengeLoadedRef.current = false;
     }
   }
+
+  // Switch to Random Game mode and generate new random articles
+  async function switchToRandomGame() {
+    // First reset the game state
+    setStartingGame(false);
+    setStartTitle("");
+    setGoalTitle("");
+    setStartCategory("");
+    setGoalCategory("");
+    setStartSummary(null);
+    setGoalSummary(null);
+    setCurrentTitle(null);
+    setSummary(null);
+    setArticleHTML(null);
+    setLinks([]);
+    setHistory([]);
+    setGameActive(false);
+    setWon(false);
+    setError("");
+    setLoadingStartRandom(false);
+    setLoadingGoalRandom(false);
+    setShowArticleOnMobile(false);
+    setScoreSubmitted(false);
+    setPendingSubmission(false);
+    gameSessionId.current = null;
+    dailyChallengeLoadedRef.current = false;
+    
+    // Switch to Random Game mode
+    setDailyChallenge(false);
+    
+    // Generate new random articles
+    setLoadingStartRandom(true);
+    setLoadingGoalRandom(true);
+    try {
+      const newStartTitle = await fetchRandomTitle();
+      const newGoalTitle = await fetchRandomTitle();
+      
+      if (newStartTitle) {
+        setStartTitle(newStartTitle);
+        // Fetch summary for start article
+        fetchSummary(newStartTitle).then(setStartSummary).catch(() => setStartSummary(null));
+      }
+      
+      if (newGoalTitle) {
+        setGoalTitle(newGoalTitle);
+        // Fetch summary for goal article
+        fetchSummary(newGoalTitle).then(setGoalSummary).catch(() => setGoalSummary(null));
+      }
+    } catch (e) {
+      setError("Failed to generate random articles. Please try again.");
+    } finally {
+      setLoadingStartRandom(false);
+      setLoadingGoalRandom(false);
+    }
+  }
   
   // Check if onboarding has been shown before
   useEffect(() => {
@@ -1225,48 +1280,41 @@ export default function WikipediaJourneyGame() {
         {!gameActive && (
         <>
           {/* Daily Challenge - Central and Prominent */}
-          <Card className={`shadow-lg ${dailyChallenge ? 'border-2' : ''} ${
-            dailyChallenge 
-              ? theme === 'dark' 
-                ? 'border-blue-600 bg-gradient-to-br from-blue-950/30 to-purple-950/30' 
-                : theme === 'classic'
-                ? 'border-blue-600 bg-blue-50'
-                : 'border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50'
-              : 'shadow-sm'
+          {dailyChallenge && (
+          <Card className={`shadow-lg border-2 ${
+            theme === 'dark' 
+              ? 'border-blue-600 bg-gradient-to-br from-blue-950/30 to-purple-950/30' 
+              : theme === 'classic'
+              ? 'border-blue-600 bg-blue-50'
+              : 'border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50'
           }`}>
-            <CardHeader className={`p-3 sm:p-6 ${dailyChallenge ? (
+            <CardHeader className={`p-3 sm:p-6 ${
               theme === 'dark' 
                 ? 'bg-gradient-to-r from-blue-900/40 to-purple-900/40' 
                 : theme === 'classic'
                 ? 'bg-blue-100'
                 : 'bg-gradient-to-r from-blue-100 to-purple-100'
-            ) : ''}`}>
+            }`}>
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className={`text-base sm:text-lg flex items-center gap-2 ${
-                  dailyChallenge ? (
-                    theme === 'dark' ? 'text-white' : 'text-blue-900'
-                  ) : (
-                    theme === 'dark' ? 'text-white' : 'text-slate-900'
-                  )
+                  theme === 'dark' ? 'text-white' : 'text-blue-900'
                 }`}>
-                  <Calendar className={`h-5 w-5 ${dailyChallenge ? (
+                  <Calendar className={`h-5 w-5 ${
                     theme === 'dark' ? 'text-blue-300' : 'text-blue-600'
-                  ) : ''}`} />
+                  }`} />
                   Daily Challenge
                 </CardTitle>
-                {dailyChallenge && (
-                  <Badge variant="default" className="bg-blue-600 dark:bg-blue-500">
-                    <Trophy className="h-3 w-3 mr-1" />
-                    Compete Globally
-                  </Badge>
-              )}
-            </div>
-          </CardHeader>
+                <Badge variant="default" className="bg-blue-600 dark:bg-blue-500">
+                  <Trophy className="h-3 w-3 mr-1" />
+                  Compete Globally
+                </Badge>
+              </div>
+            </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6 p-3 sm:p-6">
-            {dailyChallenge ? (
-              <div className="space-y-4">
-                {/* Completion Status */}
-                {hasSubmittedToday(getDateString()) && (
+            <div className="space-y-4">
+              {/* Completion Status */}
+              {(hasSubmittedToday(getDateString()) || won) ? (
+                <>
                   <div className={`p-3 sm:p-4 rounded-lg border-2 ${
                     theme === 'dark'
                       ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-600'
@@ -1291,7 +1339,7 @@ export default function WikipediaJourneyGame() {
                         </p>
                       </div>
                     </div>
-                <Button
+                    <Button
                       variant="outline"
                       onClick={() => {
                         setShowLeaderboard(true);
@@ -1301,164 +1349,178 @@ export default function WikipediaJourneyGame() {
                     >
                       <Users className="h-4 w-4 mr-2" />
                       View Leaderboard
-                </Button>
-            </div>
-                )}
-                
-                {/* Challenge Description */}
-              <div className={`p-3 sm:p-4 rounded-lg border ${
-                theme === 'dark'
-                  ? 'border-gray-700 bg-gray-800/50'
-                  : theme === 'classic'
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-blue-200 bg-blue-50'
-              }`}>
-                  <p className={`text-xs sm:text-sm mb-3 sm:mb-4 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-slate-700'
-                }`}>
-                  Today's challenge uses fixed start and goal articles that are the same for everyone. 
-                  Try to complete it in as few moves as possible!
-                </p>
+                    </Button>
+                  </div>
                   
-                  {/* Start Article */}
-                  {startTitle && (
-                    <div className={`mb-3 sm:mb-4 p-3 sm:p-4 rounded-lg border ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-900/50'
-                        : theme === 'classic'
-                        ? 'border-black bg-white'
-                        : 'border-slate-300 bg-white'
-                    }`}>
-                      <div className="flex items-start gap-3 sm:gap-4">
-                        {startSummary?.thumbnail && (
-                          <img 
-                            src={startSummary.thumbnail} 
-                            alt={startSummary.title} 
-                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg object-cover flex-shrink-0 border-2 ${
-                              theme === 'dark' ? 'border-gray-600' : theme === 'classic' ? 'border-black' : 'border-slate-300'
-                            }" 
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Flag className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                              theme === 'dark' ? 'text-blue-400' : theme === 'classic' ? 'text-black' : 'text-blue-600'
-                            }`} />
-                            <span className={`text-xs font-medium ${
-                              theme === 'dark' ? 'text-blue-300' : theme === 'classic' ? 'text-black' : 'text-blue-700'
-                            }`}>
-                              START ARTICLE
-                            </span>
-                          </div>
-                          <h3 className={`font-bold text-base sm:text-lg mb-1 break-words ${
-                      theme === 'dark' ? 'text-white' : 'text-slate-900'
-                    }`}>
-                            {startTitle}
-                          </h3>
-                          {startSummary?.description && (
-                            <p className={`text-xs sm:text-sm mb-2 ${
-                              theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
-                            }`}>
-                              {startSummary.description}
-                            </p>
-                          )}
-                          {startSummary?.extract && (
-                            <p className={`text-xs line-clamp-2 ${
-                              theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
-                            }`}>
-                              {startSummary.extract}
-                            </p>
-                          )}
-                    </div>
+                  {/* New Random Game Promotion */}
+                  <div className={`p-4 sm:p-6 rounded-lg border-2 ${
+                    theme === 'dark'
+                      ? 'bg-gradient-to-br from-purple-900/30 to-blue-900/30 border-purple-600'
+                      : theme === 'classic'
+                      ? 'border-purple-600 bg-purple-50 border-4'
+                      : 'bg-gradient-to-br from-purple-50 to-blue-50 border-purple-400'
+                  }`}>
+                    <div className="text-center space-y-3 sm:space-y-4">
+                      <div className="flex justify-center">
+                        <Shuffle className={`h-8 w-8 sm:h-10 sm:w-10 ${
+                          theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                        }`} />
                       </div>
-                    </div>
-                  )}
-                  
-                  {/* Goal Article */}
-                  {goalTitle && (
-                    <div className={`p-3 sm:p-4 rounded-lg border-2 ${
-                      theme === 'dark'
-                        ? 'border-yellow-600 bg-yellow-900/20'
-                        : theme === 'classic'
-                        ? 'border-black bg-yellow-50 border-4'
-                        : 'border-yellow-400 bg-yellow-50'
-                    }`}>
-                      <div className="flex items-start gap-3 sm:gap-4">
-                        {goalSummary?.thumbnail && (
-                          <img 
-                            src={goalSummary.thumbnail} 
-                            alt={goalSummary.title} 
-                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg object-cover flex-shrink-0 border-2 ${
-                              theme === 'dark' ? 'border-yellow-600' : theme === 'classic' ? 'border-black' : 'border-yellow-400'
-                            }" 
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Target className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                              theme === 'dark' ? 'text-yellow-400' : theme === 'classic' ? 'text-black' : 'text-yellow-600'
-                            }`} />
-                            <span className={`text-xs font-medium ${
-                              theme === 'dark' ? 'text-yellow-300' : theme === 'classic' ? 'text-black' : 'text-yellow-700'
-                            }`}>
-                              GOAL ARTICLE
-                            </span>
-                          </div>
-                          <h3 className={`font-bold text-base sm:text-lg mb-1 break-words ${
-                      theme === 'dark' ? 'text-white' : 'text-slate-900'
-                    }`}>
-                            {goalTitle}
-                          </h3>
-                          {goalSummary?.description && (
-                            <p className={`text-xs sm:text-sm mb-2 ${
-                              theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
-                            }`}>
-                              {goalSummary.description}
-                            </p>
-                          )}
-                          {goalSummary?.extract && (
-                            <p className={`text-xs line-clamp-2 ${
-                              theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
-                            }`}>
-                              {goalSummary.extract}
-                            </p>
-                          )}
-                        </div>
+                      <h3 className={`font-semibold text-base sm:text-lg ${
+                        theme === 'dark' ? 'text-purple-200' : 'text-purple-900'
+                      }`}>
+                        Try a New Random Game!
+                      </h3>
+                      <p className={`text-xs sm:text-sm ${
+                        theme === 'dark' ? 'text-purple-300' : 'text-purple-800'
+                      }`}>
+                        Keep playing with unlimited random challenges. Each game features unique start and goal articles!
+                      </p>
+                      <Button
+                        onClick={switchToRandomGame}
+                        className={`w-full sm:w-auto ${
+                          theme === 'dark'
+                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                            : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                        }`}
+                      >
+                        <Shuffle className="h-4 w-4 mr-2" />
+                        Start New Random Game
+                      </Button>
                     </div>
                   </div>
-                )}
-                </div>
-              </div>
-            ) : (
-              <div className={`p-4 sm:p-6 rounded-lg border-2 ${
-                theme === 'dark'
-                  ? 'border-gray-700 bg-gray-800/30'
-                  : theme === 'classic'
-                  ? 'border-gray-400 bg-gray-50'
-                  : 'border-gray-200 bg-gray-50'
-              }`}>
-                <div className="text-center space-y-3 sm:space-y-4">
-                  <p className={`text-sm sm:text-base ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
+                </>
+              ) : (
+                <>
+                  {/* Challenge Description */}
+                  <div className={`p-3 sm:p-4 rounded-lg border ${
+                    theme === 'dark'
+                      ? 'border-gray-700 bg-gray-800/50'
+                      : theme === 'classic'
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-blue-200 bg-blue-50'
                   }`}>
-                    Daily Challenge mode is active. Switch to Random Game to play with custom articles.
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setDailyChallenge(false);
-                      resetGame();
-                    }}
-                    className="w-full sm:w-auto"
-                  >
-                    <Shuffle className="h-4 w-4 mr-2" />
-                    Switch to Random Game
-                  </Button>
-                </div>
-              </div>
-            )}
+                    <p className={`text-xs sm:text-sm mb-3 sm:mb-4 ${
+                      theme === 'dark' ? 'text-gray-200' : 'text-slate-700'
+                    }`}>
+                      Today's challenge uses fixed start and goal articles that are the same for everyone. 
+                      Try to complete it in as few moves as possible!
+                    </p>
+                      
+                    {/* Start Article */}
+                    {startTitle && (
+                      <div className={`mb-3 sm:mb-4 p-3 sm:p-4 rounded-lg border ${
+                        theme === 'dark'
+                          ? 'border-gray-600 bg-gray-900/50'
+                          : theme === 'classic'
+                          ? 'border-black bg-white'
+                          : 'border-slate-300 bg-white'
+                      }`}>
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          {startSummary?.thumbnail && (
+                            <img 
+                              src={startSummary.thumbnail} 
+                              alt={startSummary.title} 
+                              className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg object-cover flex-shrink-0 border-2 ${
+                                theme === 'dark' ? 'border-gray-600' : theme === 'classic' ? 'border-black' : 'border-slate-300'
+                              }" 
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Flag className={`h-4 w-4 sm:h-5 sm:w-5 ${
+                                theme === 'dark' ? 'text-blue-400' : theme === 'classic' ? 'text-black' : 'text-blue-600'
+                              }`} />
+                              <span className={`text-xs font-medium ${
+                                theme === 'dark' ? 'text-blue-300' : theme === 'classic' ? 'text-black' : 'text-blue-700'
+                              }`}>
+                                START ARTICLE
+                              </span>
+                            </div>
+                            <h3 className={`font-bold text-base sm:text-lg mb-1 break-words ${
+                              theme === 'dark' ? 'text-white' : 'text-slate-900'
+                            }`}>
+                              {startTitle}
+                            </h3>
+                            {startSummary?.description && (
+                              <p className={`text-xs sm:text-sm mb-2 ${
+                                theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
+                              }`}>
+                                {startSummary.description}
+                              </p>
+                            )}
+                            {startSummary?.extract && (
+                              <p className={`text-xs line-clamp-2 ${
+                                theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
+                              }`}>
+                                {startSummary.extract}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Goal Article */}
+                    {goalTitle && (
+                      <div className={`p-3 sm:p-4 rounded-lg border-2 ${
+                        theme === 'dark'
+                          ? 'border-yellow-600 bg-yellow-900/20'
+                          : theme === 'classic'
+                          ? 'border-black bg-yellow-50 border-4'
+                          : 'border-yellow-400 bg-yellow-50'
+                      }`}>
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          {goalSummary?.thumbnail && (
+                            <img 
+                              src={goalSummary.thumbnail} 
+                              alt={goalSummary.title} 
+                              className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg object-cover flex-shrink-0 border-2 ${
+                                theme === 'dark' ? 'border-yellow-600' : theme === 'classic' ? 'border-black' : 'border-yellow-400'
+                              }" 
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Target className={`h-4 w-4 sm:h-5 sm:w-5 ${
+                                theme === 'dark' ? 'text-yellow-400' : theme === 'classic' ? 'text-black' : 'text-yellow-600'
+                              }`} />
+                              <span className={`text-xs font-medium ${
+                                theme === 'dark' ? 'text-yellow-300' : theme === 'classic' ? 'text-black' : 'text-yellow-700'
+                              }`}>
+                                GOAL ARTICLE
+                              </span>
+                            </div>
+                            <h3 className={`font-bold text-base sm:text-lg mb-1 break-words ${
+                              theme === 'dark' ? 'text-white' : 'text-slate-900'
+                            }`}>
+                              {goalTitle}
+                            </h3>
+                            {goalSummary?.description && (
+                              <p className={`text-xs sm:text-sm mb-2 ${
+                                theme === 'dark' ? 'text-gray-300' : 'text-slate-600'
+                              }`}>
+                                {goalSummary.description}
+                              </p>
+                            )}
+                            {goalSummary?.extract && (
+                              <p className={`text-xs line-clamp-2 ${
+                                theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
+                              }`}>
+                                {goalSummary.extract}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
+          )}
 
         {/* Random Game - Secondary Option */}
         {dailyChallenge && (
@@ -1478,10 +1540,7 @@ export default function WikipediaJourneyGame() {
                 </p>
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setDailyChallenge(false);
-                    resetGame();
-                  }}
+                  onClick={switchToRandomGame}
                   className="w-full sm:w-auto"
                 >
                   <Shuffle className="h-4 w-4 mr-2" />
