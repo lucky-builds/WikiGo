@@ -319,6 +319,25 @@ export const WikipediaArticleViewer = React.memo(function WikipediaArticleViewer
     // Intercept all link clicks
     const links = container.querySelectorAll('a[href]');
     links.forEach(link => {
+      // Check if this is a red link (non-existent article)
+      // Red links in Wikipedia HTML typically have class "new" or are styled differently
+      const isRedLink = link.classList.contains('new') || 
+                       link.classList.contains('mw-redirect') ||
+                       link.getAttribute('href')?.includes('redlink=1');
+      
+      if (isRedLink) {
+        // Style red links differently and prevent clicking
+        link.style.cursor = 'not-allowed';
+        link.style.opacity = '0.6';
+        link.title = 'This article does not exist on Wikipedia';
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          // Optionally show a tooltip or notification
+        });
+        return;
+      }
+      
       link.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();

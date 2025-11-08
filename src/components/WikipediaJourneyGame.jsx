@@ -305,32 +305,45 @@ async function fetchLinks(title) {
   let continueToken = null;
   const MAX_LINKS = 2000;
   
-  do {
-    let url = `${API}&action=query&prop=links&plnamespace=0&pllimit=500&format=json&titles=${encodeURIComponent(title)}`;
-    if (continueToken) {
-      url += `&plcontinue=${encodeURIComponent(continueToken)}`;
-    }
+  try {
+    do {
+      let url = `${API}&action=query&prop=links&plnamespace=0&pllimit=500&format=json&titles=${encodeURIComponent(title)}`;
+      if (continueToken) {
+        url += `&plcontinue=${encodeURIComponent(continueToken)}`;
+      }
+      
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      
+      const data = await res.json();
+      const pages = data?.query?.pages || {};
+      const firstPage = Object.values(pages)[0];
+      
+      // Check if page is missing (non-existent article)
+      if (firstPage?.missing !== undefined) {
+        return [];
+      }
+      
+      const links = (firstPage?.links || []).map((l) => l.title);
+      allLinks = allLinks.concat(links);
+      
+      // Stop if we've reached the limit
+      if (allLinks.length >= MAX_LINKS) {
+        allLinks = allLinks.slice(0, MAX_LINKS);
+        break;
+      }
+      
+      // Check if there are more results
+      continueToken = data?.continue?.plcontinue || null;
+    } while (continueToken);
     
-    const res = await fetch(url);
-    const data = await res.json();
-    const pages = data?.query?.pages || {};
-    const firstPage = Object.values(pages)[0];
-    const links = (firstPage?.links || []).map((l) => l.title);
-    allLinks = allLinks.concat(links);
-    
-    // Stop if we've reached the limit
-    if (allLinks.length >= MAX_LINKS) {
-      allLinks = allLinks.slice(0, MAX_LINKS);
-      break;
-    }
-    
-    // Check if there are more results
-    continueToken = data?.continue?.plcontinue || null;
-  } while (continueToken);
-  
-  // Cache the result
-  linksCache.set(cacheKey, allLinks);
-  return allLinks;
+    // Cache the result
+    linksCache.set(cacheKey, allLinks);
+    return allLinks;
+  } catch (e) {
+    console.error('Error fetching links:', e);
+    return [];
+  }
 }
 
 async function fetchArticleHTML(title) {
@@ -361,19 +374,24 @@ async function fetchSummary(title) {
   if (cached) return cached;
 
   const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  const summary = {
-    title: data.title,
-    description: data.description,
-    extract: data.extract,
-    thumbnail: data.thumbnail?.source || null,
-    url: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
-  };
-  // Cache the result
-  summaryCache.set(cacheKey, summary);
-  return summary;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const summary = {
+      title: data.title,
+      description: data.description,
+      extract: data.extract,
+      thumbnail: data.thumbnail?.source || null,
+      url: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
+    };
+    // Cache the result
+    summaryCache.set(cacheKey, summary);
+    return summary;
+  } catch (e) {
+    console.error('Error fetching article summary:', e);
+    return null;
+  }
 }
 
 function useTimer(active) {
@@ -462,12 +480,21 @@ export default function WikipediaJourneyGame() {
         fetchLinks(title),
         fetchArticleHTML(title)
       ]);
+      
+      // Check if article exists (summary will be null for non-existent articles)
+      if (!sum) {
+        setError(`The article "${title}" doesn't exist on Wikipedia. Please try another link.`);
+        setLoading(false);
+        return;
+      }
+      
       setSummary(sum);
-      setLinks(lks);
+      setLinks(lks || []);
       setArticleHTML(html);
-      setCurrentTitle(sum?.title || title);
-      if (pushHistory) setHistory((h) => [...h, sum?.title || title]);
+      setCurrentTitle(sum.title);
+      if (pushHistory) setHistory((h) => [...h, sum.title]);
     } catch (e) {
+      console.error('Error loading page:', e);
       setError("Couldn't load the page. Try another link.");
     } finally {
       setLoading(false);
