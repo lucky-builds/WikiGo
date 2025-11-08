@@ -47,6 +47,37 @@ export async function trackGameStart({ startTitle, goalTitle, isDailyChallenge, 
 }
 
 /**
+ * Update game history as player progresses
+ * @param {string} gameSessionId - Game session ID from trackGameStart
+ * @param {string[]} history - Array of article titles in the current path
+ * @returns {Promise<boolean>} - Success status
+ */
+export async function updateGameHistory(gameSessionId, history) {
+  if (!gameSessionId) {
+    return false;
+  }
+
+  try {
+    const { error } = await supabase
+      .from(GAME_ANALYTICS_TABLE)
+      .update({
+        history: history,
+      })
+      .eq('id', gameSessionId);
+
+    if (error) {
+      console.error('Error updating game history:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Error updating game history:', err);
+    return false;
+  }
+}
+
+/**
  * Track when a game is completed
  * @param {string} gameSessionId - Game session ID from trackGameStart
  * @param {Object} completionData - Completion data object
