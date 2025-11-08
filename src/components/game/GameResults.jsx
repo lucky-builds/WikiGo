@@ -39,23 +39,23 @@ export const GameResults = React.memo(function GameResults({
 
   const handleShareChallenge = () => {
     const baseUrl = window.location.origin + window.location.pathname;
-    const challengeUrl = `${baseUrl}?start=${encodeURIComponent(startTitle)}&end=${encodeURIComponent(goalTitle)}&moves=${moveCount}&time=${Math.floor(finalTime.current / 1000)}&score=${finalScore}&username=${encodeURIComponent(username)}`;
+    const timeInSeconds = Math.floor(finalTime.current / 1000);
+    const challengeUrl = `${baseUrl}?start=${encodeURIComponent(startTitle)}&end=${encodeURIComponent(goalTitle)}&moves=${moveCount}&time=${timeInSeconds}&score=${finalScore}&username=${encodeURIComponent(username)}`;
     
-    const shareText = `${username} challenged you to beat their WikiGo score! Can you navigate from "${startTitle}" to "${goalTitle}" faster? Score: ${finalScore} in ${moveCount} moves and ${prettyTime(finalTime.current)}. Accept the challenge: ${challengeUrl}`;
+    const shareText = `${username} challenged you to beat their WikiGo score!\n\nCan you navigate from ${startTitle} → ${goalTitle} faster?\n\nScore: ${finalScore} | ${moveCount} moves | ${prettyTime(finalTime.current)}\n\nAccept the challenge →\n\n${challengeUrl}`;
     
     if (navigator.share) {
       navigator.share({ 
         title: "WikiGo Challenge",
-        text: shareText,
-        url: challengeUrl
+        text: shareText
       }).catch(() => {
         // Fallback to clipboard if share is cancelled
-        navigator.clipboard.writeText(challengeUrl);
-        alert("Challenge URL copied to clipboard!");
+        navigator.clipboard.writeText(shareText);
+        alert("Challenge message copied to clipboard!");
       });
     } else {
-      navigator.clipboard.writeText(challengeUrl);
-      alert("Challenge URL copied to clipboard!");
+      navigator.clipboard.writeText(shareText);
+      alert("Challenge message copied to clipboard!");
     }
   };
 
