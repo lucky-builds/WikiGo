@@ -271,7 +271,7 @@ async function fetchDailyChallengeArticles() {
     // Fetch daily challenge from Supabase
     const { data, error } = await supabase
       .from(DAILY_CHALLENGES_TABLE)
-      .select('start_title, goal_title')
+      .select('start_title, goal_title, hint')
       .eq('date', dateStr)
       .single();
     
@@ -287,6 +287,7 @@ async function fetchDailyChallengeArticles() {
     return {
       startTitle: data.start_title,
       goalTitle: data.goal_title,
+      hint: data.hint || null,
     };
   } catch (err) {
     console.error('Failed to fetch daily challenge from Supabase:', err);
@@ -432,6 +433,8 @@ export default function WikipediaJourneyGame() {
   const [gameActive, setGameActive] = useState(false);
   const [won, setWon] = useState(false);
   const [dailyChallenge, setDailyChallenge] = useState(true); // Default to Daily Challenge
+  const [dailyChallengeHint, setDailyChallengeHint] = useState(null);
+  const [isDailyChallengeCompleted, setIsDailyChallengeCompleted] = useState(false);
   const [timeUntilReset, setTimeUntilReset] = useState(getTimeUntilMidnight());
   const timer = useTimer(gameActive && !won);
   const dailyChallengeLoadedRef = useRef(false);
@@ -570,6 +573,7 @@ export default function WikipediaJourneyGame() {
         setStartCategory("");
         setGoalCategory("");
         setDailyChallenge(false); // Challenge mode overrides daily challenge
+        setDailyChallengeHint(null);
       } else if (dailyChallenge) {
         // Daily Challenge mode: use date-based deterministic selection
         const dailyArticles = await fetchDailyChallengeArticles();
@@ -577,6 +581,7 @@ export default function WikipediaJourneyGame() {
         g = dailyArticles.goalTitle;
         setStartTitle(s);
         setGoalTitle(g);
+        setDailyChallengeHint(dailyArticles.hint);
         setStartCategory("");
         setGoalCategory("");
       } else {
@@ -681,6 +686,7 @@ export default function WikipediaJourneyGame() {
     setStartingGame(false);
     setStartTitle("");
     setGoalTitle("");
+    setDailyChallengeHint(null);
     setStartCategory("");
     setGoalCategory("");
     setStartSummary(null);
@@ -835,9 +841,10 @@ export default function WikipediaJourneyGame() {
   useEffect(() => {
     if (dailyChallenge && !gameActive && !startTitle && !goalTitle && !dailyChallengeLoadedRef.current) {
       dailyChallengeLoadedRef.current = true;
-      fetchDailyChallengeArticles().then(({ startTitle, goalTitle }) => {
+      fetchDailyChallengeArticles().then(({ startTitle, goalTitle, hint }) => {
         setStartTitle(startTitle);
         setGoalTitle(goalTitle);
+        setDailyChallengeHint(hint);
       }).catch(() => {
         setError("Failed to load daily challenge. Try again.");
         dailyChallengeLoadedRef.current = false;
@@ -849,6 +856,17 @@ export default function WikipediaJourneyGame() {
       dailyChallengeLoadedRef.current = false;
     }
   }, [dailyChallenge, gameActive, startTitle, goalTitle]);
+
+  // Check if today's daily challenge is completed
+  useEffect(() => {
+    if (dailyChallenge && !gameActive) {
+      const dateString = getDateString();
+      const completed = hasSubmittedToday(dateString) || (won && scoreSubmitted);
+      setIsDailyChallengeCompleted(completed);
+    } else if (!dailyChallenge) {
+      setIsDailyChallengeCompleted(false);
+    }
+  }, [dailyChallenge, gameActive, won, scoreSubmitted]);
 
   // Load yesterday's challenge data on mount
   useEffect(() => {
@@ -1144,6 +1162,9 @@ export default function WikipediaJourneyGame() {
           <HeroSection 
             onStartRandomGame={switchToRandomGame} 
             dailyChallenge={dailyChallenge}
+            dailyChallengeHint={dailyChallengeHint}
+            isDailyChallengeCompleted={isDailyChallengeCompleted}
+            onStartDailyChallenge={startGame}
             username={username}
             onChangeUsername={() => setShowUsernameModal(true)}
           />

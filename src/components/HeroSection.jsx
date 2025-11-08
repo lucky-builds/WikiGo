@@ -1,9 +1,10 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Link2, Shuffle, User, Edit2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Link2, Shuffle, User, Edit2, Lightbulb, PlayCircle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
-export function HeroSection({ onStartRandomGame, dailyChallenge, username, onChangeUsername }) {
+export function HeroSection({ onStartRandomGame, dailyChallenge, dailyChallengeHint, isDailyChallengeCompleted, onStartDailyChallenge, username, onChangeUsername }) {
   const { theme } = useTheme();
 
   return (
@@ -75,6 +76,60 @@ export function HeroSection({ onStartRandomGame, dailyChallenge, username, onCha
         </p>
       )}
 
+      {/* Daily Challenge Hint */}
+      {dailyChallenge && dailyChallengeHint && (
+        <div className="max-w-2xl mx-auto px-4">
+          <Card className={`shadow-md ${
+            theme === 'dark'
+              ? 'bg-gradient-to-br from-purple-900/30 to-blue-900/30 border-purple-700/50'
+              : theme === 'classic'
+              ? 'bg-white border-2 border-black'
+              : 'bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200'
+          }`}>
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <div className={`flex-shrink-0 mt-0.5 ${
+                  theme === 'dark' ? 'text-yellow-400' : theme === 'classic' ? 'text-black' : 'text-yellow-600'
+                }`}>
+                  <Lightbulb className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h3 className={`text-sm sm:text-base font-semibold mb-1.5 ${
+                    theme === 'dark' ? 'text-purple-200' : theme === 'classic' ? 'text-black' : 'text-purple-900'
+                  }`}>
+                    Daily Challenge Hint
+                  </h3>
+                  <p className={`text-sm sm:text-base leading-relaxed ${
+                    theme === 'dark' ? 'text-gray-200' : theme === 'classic' ? 'text-black' : 'text-slate-700'
+                  }`}>
+                    {dailyChallengeHint}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Start Daily Challenge Button */}
+      {dailyChallenge && !isDailyChallengeCompleted && onStartDailyChallenge && (
+        <div className="pt-2">
+          <Button
+            onClick={onStartDailyChallenge}
+            className={`text-sm sm:text-base h-10 sm:h-11 px-4 sm:px-6 font-semibold ${
+              theme === 'dark'
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                : theme === 'classic'
+                ? 'bg-black text-white hover:bg-gray-800 border-2 border-black'
+                : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+            }`}
+          >
+            <PlayCircle className="h-4 w-4 mr-2" />
+            Start Daily Challenge
+          </Button>
+        </div>
+      )}
+
       {/* Optional Random Game CTA */}
       {dailyChallenge && (
         <div className="pt-2">
@@ -97,4 +152,3 @@ export function HeroSection({ onStartRandomGame, dailyChallenge, username, onCha
     </div>
   );
 }
-
