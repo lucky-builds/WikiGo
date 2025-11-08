@@ -1099,7 +1099,14 @@ export default function WikipediaJourneyGame() {
         {!gameActive && <UserStatsBar />}
 
         {/* Hero Section */}
-        {!gameActive && <HeroSection onStartRandomGame={switchToRandomGame} dailyChallenge={dailyChallenge} />}
+        {!gameActive && (
+          <HeroSection 
+            onStartRandomGame={switchToRandomGame} 
+            dailyChallenge={dailyChallenge}
+            username={username}
+            onChangeUsername={() => setShowUsernameModal(true)}
+          />
+        )}
 
         {!gameActive && (
         <>
