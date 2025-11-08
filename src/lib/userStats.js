@@ -130,7 +130,7 @@ export async function getUserGlobalRank() {
 
     const today = getDateString();
     
-    // Get user's best score for today
+    // Get user's best score for today - use maybeSingle() instead of single() to avoid errors when no record exists
     const { data: userScore, error: userError } = await supabase
       .from(LEADERBOARD_TABLE)
       .select('score')
@@ -138,18 +138,28 @@ export async function getUserGlobalRank() {
       .eq('username', username)
       .order('score', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle(); // Use maybeSingle() instead of single() - returns null instead of error when no record found
 
-    if (userError || !userScore) {
+    if (userError) {
+      console.error('Error fetching user score:', userError);
+      return null;
+    }
+
+    if (!userScore || !userScore.score) {
       return null; // User hasn't completed today's challenge
     }
 
     // Count how many users have a higher score
-    const { count } = await supabase
+    const { count, error: countError } = await supabase
       .from(LEADERBOARD_TABLE)
       .select('*', { count: 'exact', head: true })
       .eq('date', today)
       .gt('score', userScore.score);
+
+    if (countError) {
+      console.error('Error counting higher scores:', countError);
+      return null;
+    }
 
     return (count || 0) + 1;
   } catch (err) {
