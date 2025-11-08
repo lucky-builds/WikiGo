@@ -19,6 +19,42 @@ import { fetchYesterdayChallengeData } from "@/lib/challengeUtils";
 // --- Utilities ---
 const API = "https://en.wikipedia.org/w/api.php?origin=*";
 
+// Simple in-memory cache with TTL (Time To Live)
+class SimpleCache {
+  constructor(ttlMs = 3600000) { // Default 1 hour
+    this.cache = new Map();
+    this.ttlMs = ttlMs;
+  }
+
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    
+    if (Date.now() > item.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return item.value;
+  }
+
+  set(key, value) {
+    this.cache.set(key, {
+      value,
+      expiry: Date.now() + this.ttlMs
+    });
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+}
+
+// Create cache instances for different data types
+const summaryCache = new SimpleCache(3600000); // 1 hour
+const linksCache = new SimpleCache(3600000); // 1 hour
+const htmlCache = new SimpleCache(3600000); // 1 hour
+
 // Daily Challenge utilities
 function getDateString() {
   const now = new Date();
@@ -87,15 +123,92 @@ const CATEGORIES = [
 const CATEGORY_EXPANSIONS = {
 };
 
-async function fetchRandomTitle() {
-  const url = `${API}&action=query&list=random&rnnamespace=0&rnlimit=1&format=json`;
-  const res = await fetch(url);
-  const data = await res.json();
-  const title = data?.query?.random?.[0]?.title;
-  return title || null;
+/**
+ * Validates if an article is suitable for the game:
+ * - Has at least one link
+ * - Is not a redirect or soft redirect
+ * - Has valid content
+ */
+async function isValidArticle(title) {
+  if (!title) return false;
+  
+  try {
+    // First check if article has links (this is the most important check)
+    const links = await fetchLinks(title);
+    if (!links || links.length === 0) {
+      return false;
+    }
+    
+    // Check summary for redirect indicators
+    const summary = await fetchSummary(title);
+    if (!summary) return false;
+    
+    // Check for redirect indicators in description or extract
+    const description = (summary.description || '').toLowerCase().trim();
+    const extract = (summary.extract || '').toLowerCase().trim();
+    
+    // Check for soft redirect indicators - be more specific
+    // Look for phrases that indicate a redirect, not just mentions of other wikis
+    const softRedirectPatterns = [
+      /^soft redirect/i,
+      /^redirect to/i,
+      /^this page redirects/i,
+      /soft redirect to/i,
+      /redirects to wiktionary/i,
+      /redirects to wikisource/i,
+      /redirects to wikibooks/i,
+      /redirects to wikiquote/i,
+      /redirects to wikinews/i,
+      /redirects to wikiversity/i,
+      /redirects to wikimedia commons/i,
+      /redirects to wikidata/i,
+      /redirects to wikivoyage/i,
+    ];
+    
+    const hasSoftRedirect = softRedirectPatterns.some(pattern => 
+      pattern.test(description) || pattern.test(extract)
+    );
+    
+    if (hasSoftRedirect) {
+      return false;
+    }
+    
+    // Also check if description or extract is very short and mentions redirect
+    // Some soft redirects might not have the exact pattern but have very short content
+    if ((description.length < 50 || extract.length < 100) && 
+        (description.includes('redirect') || extract.includes('redirect'))) {
+      return false;
+    }
+    
+    return true;
+  } catch (e) {
+    console.error(`Error validating article ${title}:`, e);
+    return false;
+  }
 }
 
-async function fetchRandomTitleFromCategory(categoryName, seed = null) {
+async function fetchRandomTitle(maxRetries = 10) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const url = `${API}&action=query&list=random&rnnamespace=0&rnlimit=1&format=json`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const title = data?.query?.random?.[0]?.title;
+      
+      if (title && await isValidArticle(title)) {
+        return title;
+      }
+    } catch (e) {
+      console.error(`Error fetching random title (attempt ${attempt + 1}):`, e);
+    }
+  }
+  
+  // If all retries failed, return null
+  console.warn('Failed to find valid random article after', maxRetries, 'attempts');
+  return null;
+}
+
+async function fetchRandomTitleFromCategory(categoryName, seed = null, maxRetries = 20) {
   if (!categoryName) return null;
   
   // Check if this category has expansions (multiple related categories)
@@ -134,16 +247,38 @@ async function fetchRandomTitleFromCategory(categoryName, seed = null) {
   // Sort articles for deterministic selection
   allArticles.sort();
   
-  // Select one deterministically if seed provided, otherwise randomly
   if (allArticles.length === 0) return null;
-  let randomIndex;
+  
+  // Try to find a valid article
+  // For deterministic selection (with seed), we'll try articles in order
+  // For random selection, we'll shuffle and try
+  let articlesToTry = [...allArticles];
+  
   if (seed !== null) {
+    // Deterministic: use seed to select starting point, then try sequentially
     const rng = seededRandom(seed);
-    randomIndex = Math.floor(rng() * allArticles.length);
+    const startIndex = Math.floor(rng() * articlesToTry.length);
+    articlesToTry = [...articlesToTry.slice(startIndex), ...articlesToTry.slice(0, startIndex)];
   } else {
-    randomIndex = Math.floor(Math.random() * allArticles.length);
+    // Random: shuffle the array
+    for (let i = articlesToTry.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [articlesToTry[i], articlesToTry[j]] = [articlesToTry[j], articlesToTry[i]];
+    }
   }
-  return allArticles[randomIndex];
+  
+  // Try articles until we find a valid one
+  const maxAttempts = Math.min(maxRetries, articlesToTry.length);
+  for (let i = 0; i < maxAttempts; i++) {
+    const title = articlesToTry[i];
+    if (await isValidArticle(title)) {
+      return title;
+    }
+  }
+  
+  // If no valid article found, return null
+  console.warn(`No valid article found in category ${categoryName} after ${maxAttempts} attempts`);
+  return null;
 }
 
 async function fetchDailyChallengeArticles() {
@@ -178,9 +313,14 @@ async function fetchDailyChallengeArticles() {
 }
 
 async function fetchLinks(title) {
+  // Check cache first
+  const cacheKey = `links:${title}`;
+  const cached = linksCache.get(cacheKey);
+  if (cached) return cached;
+
   let allLinks = [];
   let continueToken = null;
-  const MAX_LINKS = 1500;
+  const MAX_LINKS = 500;
   
   do {
     let url = `${API}&action=query&prop=links&plnamespace=0&pllimit=500&format=json&titles=${encodeURIComponent(title)}`;
@@ -205,16 +345,25 @@ async function fetchLinks(title) {
     continueToken = data?.continue?.plcontinue || null;
   } while (continueToken);
   
+  // Cache the result
+  linksCache.set(cacheKey, allLinks);
   return allLinks;
 }
 
 async function fetchArticleHTML(title) {
+  // Check cache first
+  const cacheKey = `html:${title}`;
+  const cached = htmlCache.get(cacheKey);
+  if (cached) return cached;
+
   // Fetch mobile HTML version which is cleaner and easier to style
   const url = `https://en.wikipedia.org/api/rest_v1/page/html/${encodeURIComponent(title)}`;
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
     const html = await res.text();
+    // Cache the result
+    htmlCache.set(cacheKey, html);
     return html;
   } catch (e) {
     console.error('Error fetching article HTML:', e);
@@ -223,17 +372,25 @@ async function fetchArticleHTML(title) {
 }
 
 async function fetchSummary(title) {
+  // Check cache first
+  const cacheKey = `summary:${title}`;
+  const cached = summaryCache.get(cacheKey);
+  if (cached) return cached;
+
   const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const data = await res.json();
-  return {
+  const summary = {
     title: data.title,
     description: data.description,
     extract: data.extract,
     thumbnail: data.thumbnail?.source || null,
     url: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
   };
+  // Cache the result
+  summaryCache.set(cacheKey, summary);
+  return summary;
 }
 
 function prettyTime(ms) {
@@ -270,7 +427,7 @@ function useTimer(active) {
       const t0 = Date.now();
       setStart(t0);
       setNow(t0);
-      id = setInterval(() => setNow(Date.now()), 250);
+      id = setInterval(() => setNow(Date.now()), 1000);
     }
     return () => id && clearInterval(id);
   }, [active]);
@@ -278,7 +435,7 @@ function useTimer(active) {
 }
 
 // Wikipedia Article Viewer Component
-function WikipediaArticleViewer({ html, onLinkClick, theme }) {
+const WikipediaArticleViewer = React.memo(function WikipediaArticleViewer({ html, onLinkClick, theme }) {
   const articleRef = useRef(null);
   const styleRef = useRef(null);
 
@@ -399,7 +556,7 @@ function WikipediaArticleViewer({ html, onLinkClick, theme }) {
       clearTimeout(observer.timeout);
       observer.timeout = setTimeout(() => {
         cleanupElements();
-      }, 50);
+      }, 200);
     });
     
     observer.observe(container, {
@@ -652,7 +809,7 @@ function WikipediaArticleViewer({ html, onLinkClick, theme }) {
       }}
     />
   );
-}
+});
 
 export default function WikipediaJourneyGame() {
   const { theme } = useTheme();
@@ -680,6 +837,8 @@ export default function WikipediaJourneyGame() {
   const timer = useTimer(gameActive && !won);
   const dailyChallengeLoadedRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [visibleLinksCount, setVisibleLinksCount] = useState(100);
   const [showArticleOnMobile, setShowArticleOnMobile] = useState(false);
   const [startingGame, setStartingGame] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -713,7 +872,7 @@ export default function WikipediaJourneyGame() {
     return Math.round((inter / union) * 100);
   }, [goalTitle, currentTitle]);
 
-  async function loadPage(title, pushHistory = true) {
+  const loadPage = useCallback(async (title, pushHistory = true) => {
     try {
       setLoading(true);
       setError("");
@@ -732,18 +891,36 @@ export default function WikipediaJourneyGame() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   const handleLinkClick = useCallback((title) => {
     loadPage(title);
-  }, []);
+  }, [loadPage]);
 
-  // Filter links based on search query
+  // Debounce search query to avoid filtering on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Filter links based on debounced search query
   const filteredLinks = useMemo(() => {
-    if (!searchQuery.trim()) return links;
-    const query = searchQuery.toLowerCase();
+    if (!debouncedSearchQuery.trim()) return links;
+    const query = debouncedSearchQuery.toLowerCase();
     return links.filter(link => link.toLowerCase().includes(query));
-  }, [links, searchQuery]);
+  }, [links, debouncedSearchQuery]);
+
+  // Paginated links for performance
+  const visibleLinks = useMemo(() => {
+    return filteredLinks.slice(0, visibleLinksCount);
+  }, [filteredLinks, visibleLinksCount]);
+
+  // Reset visible links count when links change
+  useEffect(() => {
+    setVisibleLinksCount(100);
+  }, [links.length]);
 
   async function navigateToStep(stepIndex) {
     if (stepIndex < 0 || stepIndex >= history.length) return;
@@ -803,6 +980,9 @@ export default function WikipediaJourneyGame() {
         } else {
           s = await fetchRandomTitle();
         }
+        if (!s) {
+          throw new Error("Failed to find a valid start article. Please try again or select a different category.");
+        }
       }
       
         g = goalTitle;
@@ -811,6 +991,9 @@ export default function WikipediaJourneyGame() {
           g = await fetchRandomTitleFromCategory(goalCategory);
         } else {
           g = await fetchRandomTitle();
+        }
+        if (!g) {
+          throw new Error("Failed to find a valid goal article. Please try again or select a different category.");
         }
       }
       
@@ -846,6 +1029,7 @@ export default function WikipediaJourneyGame() {
 
   function resetGame() {
     setStartingGame(false);
+    // Clear start/goal titles when resetting random games (not daily challenge or challenge mode)
     if (!dailyChallenge && !isChallengeMode) {
     setStartTitle("");
     setGoalTitle("");
@@ -919,17 +1103,22 @@ export default function WikipediaJourneyGame() {
       const newStartTitle = await fetchRandomTitle();
       const newGoalTitle = await fetchRandomTitle();
       
-      if (newStartTitle) {
-        setStartTitle(newStartTitle);
-        // Fetch summary for start article
-        fetchSummary(newStartTitle).then(setStartSummary).catch(() => setStartSummary(null));
+      if (!newStartTitle) {
+        setError("Failed to find a valid start article. Please try again.");
+        return;
       }
       
-      if (newGoalTitle) {
-        setGoalTitle(newGoalTitle);
-        // Fetch summary for goal article
-        fetchSummary(newGoalTitle).then(setGoalSummary).catch(() => setGoalSummary(null));
+      if (!newGoalTitle) {
+        setError("Failed to find a valid goal article. Please try again.");
+        return;
       }
+      
+      setStartTitle(newStartTitle);
+      setGoalTitle(newGoalTitle);
+      
+      // Fetch summaries for both articles
+      fetchSummary(newStartTitle).then(setStartSummary).catch(() => setStartSummary(null));
+      fetchSummary(newGoalTitle).then(setGoalSummary).catch(() => setGoalSummary(null));
     } catch (e) {
       setError("Failed to generate random articles. Please try again.");
     } finally {
@@ -1021,16 +1210,18 @@ export default function WikipediaJourneyGame() {
     }
   }, [won, dailyChallenge]);
   
-  // Update time until reset for Daily Challenge
+  // Update time until reset for Daily Challenge (only when UI is visible)
   useEffect(() => {
     if (!dailyChallenge) return;
+    // Only update when leaderboard is shown or when not actively playing
+    if (gameActive && !showLeaderboard) return;
     
     const interval = setInterval(() => {
       setTimeUntilReset(getTimeUntilMidnight());
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [dailyChallenge]);
+  }, [dailyChallenge, gameActive, showLeaderboard]);
   
   // Load daily challenge articles when mode is enabled
   useEffect(() => {
@@ -1704,7 +1895,7 @@ export default function WikipediaJourneyGame() {
                           if (title) {
                             setStartTitle(title);
                           } else {
-                            setError("Could not fetch random article. Try again or select a different category.");
+                            setError("Could not find a valid start article. The article may be a redirect or have no links. Try again or select a different category.");
                           }
                         } catch (e) {
                           setError("Failed to fetch random article. Please try again.");
@@ -1806,7 +1997,7 @@ export default function WikipediaJourneyGame() {
                           if (title) {
                             setGoalTitle(title);
                           } else {
-                            setError("Could not fetch random article. Try again or select a different category.");
+                            setError("Could not find a valid goal article. The article may be a redirect or have no links. Try again or select a different category.");
                           }
                         } catch (e) {
                           setError("Failed to fetch random article. Please try again.");
@@ -1865,7 +2056,7 @@ export default function WikipediaJourneyGame() {
             </div>
             
             {/* Start Game Button */}
-            {!gameActive && startTitle && goalTitle && (
+            {!gameActive && (
               <div className="mt-4 sm:mt-6">
                 <Button 
                   onClick={startGame}
@@ -2083,7 +2274,7 @@ export default function WikipediaJourneyGame() {
                             </div>
                         )}
                         {!loading &&
-                            filteredLinks.map((l) => (
+                            visibleLinks.map((l) => (
                               <Button 
                                 key={l} 
                                 variant="outline" 
@@ -2093,6 +2284,21 @@ export default function WikipediaJourneyGame() {
                               {l}
                             </Button>
                           ))}
+                          {!loading && filteredLinks.length > visibleLinksCount && (
+                            <Button
+                              variant="outline"
+                              onClick={() => setVisibleLinksCount(prev => Math.min(prev + 100, filteredLinks.length))}
+                              className={`w-full mt-2 ${
+                                theme === 'dark'
+                                  ? 'bg-slate-700 border-slate-600 text-gray-200 hover:bg-slate-600'
+                                  : theme === 'classic'
+                                  ? 'bg-white border-black text-black hover:bg-gray-100'
+                                  : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                              }`}
+                            >
+                              Load More ({filteredLinks.length - visibleLinksCount} remaining)
+                            </Button>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -2637,11 +2843,26 @@ export default function WikipediaJourneyGame() {
                           </div>
                         )}
                         {!loading &&
-                          filteredLinks.map((l) => (
+                          visibleLinks.map((l) => (
                             <Button key={l} variant="outline" className="justify-start text-left" onClick={() => loadPage(l)}>
                               {l}
                             </Button>
                           ))}
+                        {!loading && filteredLinks.length > visibleLinksCount && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setVisibleLinksCount(prev => Math.min(prev + 100, filteredLinks.length))}
+                            className={`w-full mt-2 ${
+                              theme === 'dark'
+                                ? 'bg-slate-700 border-slate-600 text-gray-200 hover:bg-slate-600'
+                                : theme === 'classic'
+                                ? 'bg-white border-black text-black hover:bg-gray-100'
+                                : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            Load More ({filteredLinks.length - visibleLinksCount} remaining)
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
