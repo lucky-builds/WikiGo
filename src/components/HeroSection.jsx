@@ -116,7 +116,7 @@ export function HeroSection({ onStartRandomGame, dailyChallenge, dailyChallengeH
         <div className="pt-2">
           <Button
             onClick={onStartDailyChallenge}
-            className={`text-sm sm:text-base h-10 sm:h-11 px-4 sm:px-6 font-semibold ${
+            className={`text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-8 font-semibold ${
               theme === 'dark'
                 ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
                 : theme === 'classic'
@@ -124,7 +124,7 @@ export function HeroSection({ onStartRandomGame, dailyChallenge, dailyChallengeH
                 : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
             }`}
           >
-            <PlayCircle className="h-4 w-4 mr-2" />
+            <PlayCircle className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
             Start Daily Challenge
           </Button>
         </div>
