@@ -303,7 +303,7 @@ async function fetchLinks(title) {
 
   let allLinks = [];
   let continueToken = null;
-  const MAX_LINKS = 500;
+  const MAX_LINKS = 2000;
   
   do {
     let url = `${API}&action=query&prop=links&plnamespace=0&pllimit=500&format=json&titles=${encodeURIComponent(title)}`;
