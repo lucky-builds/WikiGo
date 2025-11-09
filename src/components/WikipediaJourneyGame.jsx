@@ -955,10 +955,12 @@ export default function WikipediaJourneyGame() {
       // Track game completion
       const timeToUse = finalTime.current;
       const score = finalScore;
+      // Convert milliseconds to seconds for database storage
+      const timeInSeconds = Math.floor(timeToUse / 1000);
       trackGameCompletion(gameSessionId.current, {
         score: score,
         moves: moveCount,
-        timeMs: timeToUse,
+        timeMs: timeInSeconds,
         history: history,
       }).catch(err => {
         console.error('Failed to track game completion:', err);
@@ -1022,7 +1024,8 @@ export default function WikipediaJourneyGame() {
     const currentUsername = getStoredUsername() || getOrCreateUsername();
     const score = finalScore;
     const moves = moveCount;
-    const timeMs = finalTime.current;
+    // Convert milliseconds to seconds for database storage
+    const timeInSeconds = Math.floor(finalTime.current / 1000);
 
     try {
       setSubmittingScore(true);
@@ -1034,7 +1037,7 @@ export default function WikipediaJourneyGame() {
             username: currentUsername,
             score: score,
             moves: moves,
-            time_ms: timeMs,
+            time_ms: timeInSeconds,
             date: dateString,
             start_title: startTitle,
             goal_title: goalTitle,

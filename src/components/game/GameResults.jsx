@@ -42,7 +42,12 @@ export const GameResults = React.memo(function GameResults({
     const timeInSeconds = Math.floor(finalTime.current / 1000);
     const challengeUrl = `${baseUrl}?start=${encodeURIComponent(startTitle)}&end=${encodeURIComponent(goalTitle)}&moves=${moveCount}&time=${timeInSeconds}&score=${finalScore}&username=${encodeURIComponent(username)}`;
     
-    const shareText = `${username} challenged you to beat their WikiGo score!\n\nCan you navigate from ${startTitle} → ${goalTitle} faster?\n\nScore: ${finalScore} | ${moveCount} moves | ${prettyTime(finalTime.current)}\n\nAccept the challenge →\n\n${challengeUrl}`;
+    // Format time as MM:SS
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    const formattedTime = `${minutes}:${String(seconds).padStart(2, '0')}`;
+    
+    const shareText = `${username} challenged you to beat their WikiGo score! Can you navigate from ${startTitle} → ${goalTitle} faster?\n\n${username} -> Score: ${finalScore} | ${moveCount} moves | ${formattedTime} | Accept the challenge →\n\n${challengeUrl}`;
     
     if (navigator.share) {
       navigator.share({ 

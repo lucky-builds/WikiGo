@@ -178,8 +178,17 @@ wiki/
 
 ### Environment Variables
 
+Create a `.env` file in the root directory with the following variables:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_ADMIN_SECRET=your_secret_admin_key
+```
+
 - `VITE_SUPABASE_URL`: Your Supabase project URL
 - `VITE_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+- `VITE_ADMIN_SECRET`: Secret key for accessing the admin dashboard (choose a strong, random string)
 
 ### Categories
 
@@ -202,6 +211,30 @@ This project is open source and available under the MIT License.
 - Wikipedia for providing the API and content
 - Supabase for backend infrastructure
 - All the open-source libraries that made this project possible
+
+## 🔐 Admin Dashboard
+
+The admin dashboard provides comprehensive analytics and statistics about game usage, user activity, and performance metrics.
+
+### Accessing the Admin Dashboard
+
+1. Set the `VITE_ADMIN_SECRET` environment variable in your `.env` file with a secret key of your choice
+2. Navigate to `/admin-dashboard/{your-secret-key}` in your browser
+   - Example: If your secret is `my-secret-123`, visit `http://localhost:5173/admin-dashboard/my-secret-123`
+3. The dashboard will redirect to the home page if the secret doesn't match
+
+### Dashboard Features
+
+The admin dashboard includes:
+
+- **Overview Statistics**: Total games started/completed, completion rates, active users, today's stats
+- **Daily Challenge Analytics**: Completion trends, average moves/time per challenge, challenge history table
+- **User Activity**: Top users, games started vs completed, user completion rates
+- **Leaderboard Analytics**: Score distributions, top players, moves vs time correlations
+- **Game Performance**: Average moves/time, popular articles, category usage statistics
+- **Time-based Trends**: Daily, weekly, and monthly trend analysis with interactive charts
+
+All data is fetched in real-time from your Supabase database and includes interactive charts and sortable tables.
 
 ## 📧 Support
 

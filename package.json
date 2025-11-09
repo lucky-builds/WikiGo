@@ -21,6 +21,8 @@
     "react-countup": "^6.5.3",
     "react-dom": "^18.2.0",
     "react-intersection-observer": "^10.0.0",
+    "react-router-dom": "^7.9.5",
+    "recharts": "^3.3.0",
     "tailwind-merge": "^2.0.0"
   },
   "devDependencies": {

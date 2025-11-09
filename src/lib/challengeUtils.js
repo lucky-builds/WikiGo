@@ -99,12 +99,13 @@ export async function fetchYesterdayCompletionStats(yesterdayDate) {
     }
     
     const totalMoves = data.reduce((sum, entry) => sum + (entry.moves || 0), 0);
-    const totalTime = data.reduce((sum, entry) => sum + (entry.time_ms || 0), 0);
+    // time_ms is stored in seconds, convert to milliseconds for calculations
+    const totalTime = data.reduce((sum, entry) => sum + ((entry.time_ms || 0) * 1000), 0);
     
     return {
       completionCount,
       averageMoves: Math.round(totalMoves / completionCount),
-      averageTime: Math.round(totalTime / completionCount),
+      averageTime: Math.round(totalTime / completionCount), // Returns in milliseconds
     };
   } catch (err) {
     console.error('Failed to fetch completion stats:', err);
@@ -191,7 +192,8 @@ export async function fetchYesterdayBestSolution(yesterdayDate) {
       return {
         username: bestSolution.username,
         moves: bestSolution.moves,
-        timeMs: bestSolution.time_ms,
+        // time_ms is stored in seconds, convert to milliseconds
+        timeMs: bestSolution.time_ms * 1000,
         score: bestSolution.score,
         history: historyArray,
       };
