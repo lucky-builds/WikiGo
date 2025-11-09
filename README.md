@@ -126,6 +126,15 @@ Preview the production build:
 npm run preview
 ```
 
+### Deploying to Vercel
+
+The project includes a `vercel.json` configuration file that handles:
+- Client-side routing for React Router (all routes rewrite to `index.html`)
+- Static asset caching for optimal performance
+- Proper handling of the admin dashboard route
+
+Simply connect your repository to Vercel and deploy. The configuration will automatically handle routing.
+
 ## 🎮 How to Play
 
 1. **Choose a Game Mode**
@@ -156,6 +165,7 @@ wiki/
 ├── src/
 │   ├── components/     # React components
 │   │   ├── ui/         # Reusable UI components
+│   │   ├── admin/      # Admin dashboard components
 │   │   ├── Leaderboard.jsx
 │   │   ├── ThemeSwitcher.jsx
 │   │   └── WikipediaJourneyGame.jsx
@@ -163,6 +173,7 @@ wiki/
 │   │   └── ThemeContext.jsx
 │   ├── lib/            # Utility functions
 │   │   ├── supabase.js
+│   │   ├── adminStats.js
 │   │   ├── username.js
 │   │   └── utils.js
 │   ├── App.jsx         # Main app component
@@ -171,7 +182,8 @@ wiki/
 ├── index.html
 ├── package.json
 ├── tailwind.config.js
-└── vite.config.js
+├── vite.config.js
+└── vercel.json         # Vercel deployment configuration
 ```
 
 ## 🔧 Configuration
