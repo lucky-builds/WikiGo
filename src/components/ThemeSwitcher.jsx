@@ -3,14 +3,16 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Moon, Sun, BookOpen } from 'lucide-react';
 
-export function ThemeSwitcher() {
+export function ThemeSwitcher({ hideClassic = false }) {
   const { theme, setTheme } = useTheme();
 
-  const themes = [
+  const allThemes = [
     { value: 'light', label: 'Light', icon: Sun },
     { value: 'dark', label: 'Dark', icon: Moon },
     { value: 'classic', label: 'Classic', icon: BookOpen },
   ];
+
+  const themes = hideClassic ? allThemes.filter(t => t.value !== 'classic') : allThemes;
 
   return (
     <div className="flex items-center gap-2 p-1 rounded-lg border border-slate-200 bg-white dark:bg-gray-900 dark:border-gray-800 classic:bg-white classic:border-slate-400">

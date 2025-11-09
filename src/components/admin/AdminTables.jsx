@@ -16,8 +16,6 @@ function SortableHeader({ children, sortKey, currentSort, onSort, className = ''
       className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:opacity-80 ${className} ${
         theme === 'dark'
           ? 'bg-slate-700 text-gray-300'
-          : theme === 'classic'
-          ? 'bg-slate-200 text-black border border-black'
           : 'bg-slate-100 text-slate-700'
       }`}
       onClick={() => onSort(sortKey)}
@@ -77,9 +75,9 @@ function AdminTable({ title, columns, data, loading, emptyMessage = 'No data ava
 
   if (loading) {
     return (
-      <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
+      <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
         <CardHeader className="p-4">
-          <CardTitle className={`text-base font-semibold ${theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'}`}>
+          <CardTitle className={`text-base font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
             {title}
           </CardTitle>
         </CardHeader>
@@ -94,9 +92,9 @@ function AdminTable({ title, columns, data, loading, emptyMessage = 'No data ava
 
   if (!data || data.length === 0) {
     return (
-      <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
+      <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
         <CardHeader className="p-4">
-          <CardTitle className={`text-base font-semibold ${theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'}`}>
+          <CardTitle className={`text-base font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
             {title}
           </CardTitle>
         </CardHeader>
@@ -110,9 +108,9 @@ function AdminTable({ title, columns, data, loading, emptyMessage = 'No data ava
   }
 
   return (
-    <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
+    <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
       <CardHeader className="p-4">
-        <CardTitle className={`text-base font-semibold ${theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'}`}>
+        <CardTitle className={`text-base font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
           {title} ({data.length} total)
         </CardTitle>
       </CardHeader>
@@ -135,21 +133,21 @@ function AdminTable({ title, columns, data, loading, emptyMessage = 'No data ava
             </thead>
             <tbody
               className={`divide-y ${
-                theme === 'dark' ? 'divide-slate-700 bg-slate-800' : theme === 'classic' ? 'divide-black bg-white' : 'divide-slate-200 bg-white'
+                theme === 'dark' ? 'divide-slate-700 bg-slate-800' : 'divide-slate-200 bg-white'
               }`}
             >
               {paginatedData.map((row, index) => (
                 <tr
                   key={index}
                   className={`hover:opacity-80 ${
-                    theme === 'dark' ? 'hover:bg-slate-700' : theme === 'classic' ? 'hover:bg-slate-100' : 'hover:bg-slate-50'
+                    theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-slate-50'
                   }`}
                 >
                   {columns.map((col) => (
                     <td
                       key={col.key}
                       className={`px-4 py-3 text-sm ${
-                        theme === 'dark' ? 'text-gray-300' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+                        theme === 'dark' ? 'text-gray-300' : 'text-slate-900'
                       }`}
                     >
                       {col.render ? col.render(row[col.key], row) : row[col.key]}
@@ -165,13 +163,11 @@ function AdminTable({ title, columns, data, loading, emptyMessage = 'No data ava
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className={`px-3 py-1 rounded ${
+                className={`px-3 py-1 rounded ${
                 currentPage === 1
                   ? 'opacity-50 cursor-not-allowed'
                   : theme === 'dark'
                   ? 'bg-slate-700 hover:bg-slate-600'
-                  : theme === 'classic'
-                  ? 'bg-slate-200 hover:bg-slate-300 border border-black'
                   : 'bg-slate-100 hover:bg-slate-200'
               }`}
             >
@@ -188,8 +184,6 @@ function AdminTable({ title, columns, data, loading, emptyMessage = 'No data ava
                   ? 'opacity-50 cursor-not-allowed'
                   : theme === 'dark'
                   ? 'bg-slate-700 hover:bg-slate-600'
-                  : theme === 'classic'
-                  ? 'bg-slate-200 hover:bg-slate-300 border border-black'
                   : 'bg-slate-100 hover:bg-slate-200'
               }`}
             >
@@ -230,7 +224,7 @@ export function DailyChallengesTable({ data, loading }) {
     },
   ];
 
-  return <AdminTable title="Daily Challenges" columns={columns} data={data} loading={loading} />;
+  return <AdminTable title="Daily Challenges (Last 3 days, Today, Next 7 days)" columns={columns} data={data} loading={loading} />;
 }
 
 // Top Users Table

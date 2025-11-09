@@ -11,7 +11,6 @@ import {
   fetchGamePerformanceStats,
   fetchTimeBasedTrends,
 } from '@/lib/adminStats';
-import { fetchWebAnalyticsSummary } from '@/lib/vercelAnalytics';
 import {
   StatCard,
   AdminLineChart,
@@ -26,6 +25,8 @@ import {
   PopularArticlesTable,
   CategoryStatsTable,
 } from '@/components/admin/AdminTables';
+import { DailyChallengeManager } from '@/components/admin/DailyChallengeManager';
+import { LatestGameMatchesTable } from '@/components/admin/LatestGameMatchesTable';
 import {
   Gamepad2,
   Trophy,
@@ -35,9 +36,6 @@ import {
   Calendar,
   RefreshCw,
   BarChart3,
-  Globe,
-  Eye,
-  MousePointerClick,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,11 +48,18 @@ function formatTime(seconds) {
 }
 
 export function AdminDashboard() {
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
   const [trendPeriod, setTrendPeriod] = useState('daily');
+
+  // Switch away from classic mode if it's selected (admin dashboard doesn't support classic)
+  useEffect(() => {
+    if (theme === 'classic') {
+      setTheme('light');
+    }
+  }, [theme, setTheme]);
 
   // Overview stats
   const [overviewStats, setOverviewStats] = useState(null);
@@ -78,10 +83,6 @@ export function AdminDashboard() {
   // Time-based trends
   const [trendsData, setTrendsData] = useState([]);
   const [trendsLoading, setTrendsLoading] = useState(false);
-  
-  // Vercel Analytics
-  const [webAnalytics, setWebAnalytics] = useState(null);
-  const [webAnalyticsLoading, setWebAnalyticsLoading] = useState(false);
 
   const loadAllData = async (isRefresh = false) => {
     if (isRefresh) {
@@ -102,7 +103,6 @@ export function AdminDashboard() {
         loadLeaderboardStats(),
         loadGamePerformanceStats(),
         loadTrendsData(),
-        loadWebAnalytics(),
       ]);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -116,7 +116,30 @@ export function AdminDashboard() {
     setDailyChallengeLoading(true);
     try {
       const stats = await fetchDailyChallengeStats(dateRange);
-      setDailyChallengeStats(stats);
+      
+      // Filter to show: last 3 days, today, next 7 days
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const threeDaysAgo = new Date(today);
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      
+      const sevenDaysFromNow = new Date(today);
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      
+      const filteredStats = (stats || []).filter((challenge) => {
+        const challengeDate = new Date(challenge.date + 'T00:00:00');
+        return challengeDate >= threeDaysAgo && challengeDate <= sevenDaysFromNow;
+      });
+      
+      // Sort by date ascending (3 days ago -> today -> 7 days ahead)
+      filteredStats.sort((a, b) => {
+        const dateA = new Date(a.date + 'T00:00:00');
+        const dateB = new Date(b.date + 'T00:00:00');
+        return dateA - dateB;
+      });
+      
+      setDailyChallengeStats(filteredStats);
     } catch (error) {
       console.error('Error loading daily challenge stats:', error);
     } finally {
@@ -169,18 +192,6 @@ export function AdminDashboard() {
       console.error('Error loading trends data:', error);
     } finally {
       setTrendsLoading(false);
-    }
-  };
-
-  const loadWebAnalytics = async () => {
-    setWebAnalyticsLoading(true);
-    try {
-      const analytics = await fetchWebAnalyticsSummary(30);
-      setWebAnalytics(analytics);
-    } catch (error) {
-      console.error('Error loading web analytics:', error);
-    } finally {
-      setWebAnalyticsLoading(false);
     }
   };
 
@@ -244,7 +255,7 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <div className={`min-h-screen p-4 md:p-6 ${
-        theme === 'dark' ? 'bg-slate-900' : theme === 'classic' ? 'bg-white' : 'bg-slate-50'
+        theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'
       }`}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center py-20">
@@ -264,19 +275,19 @@ export function AdminDashboard() {
 
   return (
     <div className={`min-h-screen p-4 md:p-6 ${
-      theme === 'dark' ? 'bg-slate-900' : theme === 'classic' ? 'bg-white' : 'bg-slate-50'
+      theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'
     }`}>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className={`text-3xl font-bold ${
-              theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+              theme === 'dark' ? 'text-white' : 'text-slate-900'
             }`}>
               Admin Dashboard
             </h1>
             <p className={`text-sm mt-1 ${
-              theme === 'dark' ? 'text-gray-400' : theme === 'classic' ? 'text-black' : 'text-slate-600'
+              theme === 'dark' ? 'text-gray-400' : 'text-slate-600'
             }`}>
               Game statistics and analytics
             </p>
@@ -291,7 +302,7 @@ export function AdminDashboard() {
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            <ThemeSwitcher />
+            <ThemeSwitcher hideClassic={true} />
           </div>
         </div>
 
@@ -335,10 +346,29 @@ export function AdminDashboard() {
           />
         </div>
 
+        {/* Latest Game Matches */}
+        <div className="space-y-4">
+          <LatestGameMatchesTable />
+        </div>
+
+        {/* Daily Challenge Management */}
+        <div className="space-y-4">
+          <h2 className={`text-xl font-semibold ${
+            theme === 'dark' ? 'text-white' : 'text-slate-900'
+          }`}>
+            Daily Challenge Management
+          </h2>
+          <DailyChallengeManager
+            onSuccess={() => {
+              loadDailyChallengeStats();
+            }}
+          />
+        </div>
+
         {/* Daily Challenge Analytics */}
         <div className="space-y-4">
           <h2 className={`text-xl font-semibold ${
-            theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+            theme === 'dark' ? 'text-white' : 'text-slate-900'
           }`}>
             Daily Challenge Analytics
           </h2>
@@ -362,7 +392,7 @@ export function AdminDashboard() {
         {/* User Activity */}
         <div className="space-y-4">
           <h2 className={`text-xl font-semibold ${
-            theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+            theme === 'dark' ? 'text-white' : 'text-slate-900'
           }`}>
             User Activity
           </h2>
@@ -395,7 +425,7 @@ export function AdminDashboard() {
         {/* Leaderboard Analytics */}
         <div className="space-y-4">
           <h2 className={`text-xl font-semibold ${
-            theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+            theme === 'dark' ? 'text-white' : 'text-slate-900'
           }`}>
             Leaderboard Analytics
           </h2>
@@ -421,17 +451,17 @@ export function AdminDashboard() {
         {/* Game Performance */}
         <div className="space-y-4">
           <h2 className={`text-xl font-semibold ${
-            theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+            theme === 'dark' ? 'text-white' : 'text-slate-900'
           }`}>
             Game Performance
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {gamePerformanceStats && (
               <>
-                <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
+                <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
                   <CardHeader className="p-4">
                     <CardTitle className={`text-base font-semibold ${
-                      theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
                     }`}>
                       Average Performance
                     </CardTitle>
@@ -483,128 +513,11 @@ export function AdminDashboard() {
           />
         </div>
 
-        {/* Vercel Web Analytics */}
-        <div className="space-y-4">
-          <h2 className={`text-xl font-semibold ${
-            theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
-          }`}>
-            Web Analytics (Vercel)
-          </h2>
-          {webAnalytics === null && !webAnalyticsLoading ? (
-            <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
-              <CardContent className="p-4">
-                <p className={`text-sm text-center ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
-                }`}>
-                  Vercel Analytics not configured. See README for setup instructions.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                  title="Pageviews"
-                  value={webAnalytics?.pageviews?.toLocaleString() || '0'}
-                  icon={Eye}
-                  loading={webAnalyticsLoading}
-                />
-                <StatCard
-                  title="Visitors"
-                  value={webAnalytics?.visitors?.toLocaleString() || '0'}
-                  icon={Users}
-                  loading={webAnalyticsLoading}
-                />
-                <StatCard
-                  title="Top Pages"
-                  value={webAnalytics?.topPages?.length || 0}
-                  icon={Globe}
-                  loading={webAnalyticsLoading}
-                  subtitle={`${webAnalytics?.topPages?.length || 0} tracked pages`}
-                />
-                <StatCard
-                  title="Top Referrers"
-                  value={webAnalytics?.topReferrers?.length || 0}
-                  icon={MousePointerClick}
-                  loading={webAnalyticsLoading}
-                  subtitle={`${webAnalytics?.topReferrers?.length || 0} sources`}
-                />
-              </div>
-              {webAnalytics && (webAnalytics.topPages?.length > 0 || webAnalytics.topReferrers?.length > 0) && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {webAnalytics.topPages?.length > 0 && (
-                    <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
-                      <CardHeader className="p-4">
-                        <CardTitle className={`text-base font-semibold ${
-                          theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
-                        }`}>
-                          Top Pages
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-4">
-                        <div className="space-y-2">
-                          {webAnalytics.topPages.slice(0, 10).map((page, index) => (
-                            <div key={index} className={`flex justify-between items-center p-2 rounded ${
-                              theme === 'dark' ? 'bg-slate-700' : theme === 'classic' ? 'bg-slate-100 border border-black' : 'bg-slate-50'
-                            }`}>
-                              <span className={`text-sm ${
-                                theme === 'dark' ? 'text-gray-300' : theme === 'classic' ? 'text-black' : 'text-slate-700'
-                              }`}>
-                                {page.path || page.page || 'Unknown'}
-                              </span>
-                              <span className={`text-sm font-semibold ${
-                                theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
-                              }`}>
-                                {page.views?.toLocaleString() || page.count?.toLocaleString() || 0}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  {webAnalytics.topReferrers?.length > 0 && (
-                    <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
-                      <CardHeader className="p-4">
-                        <CardTitle className={`text-base font-semibold ${
-                          theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
-                        }`}>
-                          Top Referrers
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-4">
-                        <div className="space-y-2">
-                          {webAnalytics.topReferrers.slice(0, 10).map((ref, index) => (
-                            <div key={index} className={`flex justify-between items-center p-2 rounded ${
-                              theme === 'dark' ? 'bg-slate-700' : theme === 'classic' ? 'bg-slate-100 border border-black' : 'bg-slate-50'
-                            }`}>
-                              <span className={`text-sm truncate ${
-                                theme === 'dark' ? 'text-gray-300' : theme === 'classic' ? 'text-black' : 'text-slate-700'
-                              }`}>
-                                {ref.referrer || ref.source || 'Direct'}
-                              </span>
-                              <span className={`text-sm font-semibold ${
-                                theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
-                              }`}>
-                                {ref.count?.toLocaleString() || 0}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
         {/* Time-based Trends */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className={`text-xl font-semibold ${
-              theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+              theme === 'dark' ? 'text-white' : 'text-slate-900'
             }`}>
               Time-based Trends
             </h2>

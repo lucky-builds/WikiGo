@@ -476,3 +476,34 @@ export async function fetchTimeBasedTrends(period = 'daily', days = 30) {
   }
 }
 
+/**
+ * Fetch latest game analytics matches
+ * @param {number} limit - Number of matches to fetch (default: 10)
+ * @param {string} filter - 'all', 'completed', or 'incomplete'
+ * @returns {Promise<Array>} Latest game analytics
+ */
+export async function fetchLatestGameMatches(limit = 10, filter = 'all') {
+  try {
+    let query = supabase
+      .from(GAME_ANALYTICS_TABLE)
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(limit);
+
+    if (filter === 'completed') {
+      query = query.eq('completed', true);
+    } else if (filter === 'incomplete') {
+      query = query.eq('completed', false);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching latest game matches:', error);
+    return [];
+  }
+}
+
