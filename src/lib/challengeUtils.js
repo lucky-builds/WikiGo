@@ -117,46 +117,124 @@ export async function fetchYesterdayCompletionStats(yesterdayDate) {
 }
 
 /**
- * Fetch the best solution for yesterday's challenge
- * First tries to get from leaderboard table, then falls back to daily_challenges table
+ * Fetch the highest score solution for yesterday's challenge
+ * @param {string} yesterdayDate - Yesterday's date string in YYYY-MM-DD format
+ * @returns {Promise<{username: string, moves: number, timeMs: number, score: number, history: string[]} | null>}
+ */
+export async function fetchYesterdayHighestScore(yesterdayDate) {
+  try {
+    // Get solution from leaderboard table ordered by score
+    const { data: leaderboardData, error: leaderboardError } = await supabase
+      .from(LEADERBOARD_TABLE)
+      .select('username, moves, time_ms, score, history')
+      .eq('date', yesterdayDate)
+      .order('score', { ascending: false })
+      .limit(1);
+    
+    if (leaderboardError) {
+      console.error('Error fetching highest score from leaderboard:', leaderboardError);
+      return null;
+    }
+    
+    if (!leaderboardData || leaderboardData.length === 0) {
+      return null;
+    }
+    
+    const bestSolution = leaderboardData[0];
+    let historyArray = [];
+    
+    // Parse history if available
+    if (bestSolution.history) {
+      if (Array.isArray(bestSolution.history)) {
+        historyArray = bestSolution.history;
+      } else if (typeof bestSolution.history === 'string') {
+        try {
+          historyArray = JSON.parse(bestSolution.history);
+        } catch (e) {
+          console.error('Error parsing history JSON:', e);
+        }
+      }
+    }
+    
+    return {
+      username: bestSolution.username,
+      moves: bestSolution.moves,
+      timeMs: bestSolution.time_ms,
+      score: bestSolution.score,
+      history: historyArray,
+    };
+  } catch (err) {
+    console.error('Failed to fetch highest score solution:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetch the best solution (least moves) for yesterday's challenge
+ * First priority: daily_challenges table
+ * Second priority: leaderboard table
+ * If moves count is the same, prioritize daily_challenges table
  * @param {string} yesterdayDate - Yesterday's date string in YYYY-MM-DD format
  * @returns {Promise<{username: string, moves: number, timeMs: number, score: number, history: string[]} | null>}
  */
 export async function fetchYesterdayBestSolution(yesterdayDate) {
   try {
-    // First, try to get solution from leaderboard table
-    const { data, error } = await supabase
+    // First priority: Get solution from daily_challenges table
+    const { data: challengeData, error: challengeError } = await supabase
+      .from(DAILY_CHALLENGES_TABLE)
+      .select('best_solution_history')
+      .eq('date', yesterdayDate)
+      .single();
+    
+    let dailyChallengeHistory = [];
+    let dailyChallengeMoves = null;
+    
+    if (!challengeError && challengeData && challengeData.best_solution_history) {
+      // Parse the history from daily_challenges table
+      if (Array.isArray(challengeData.best_solution_history)) {
+        dailyChallengeHistory = challengeData.best_solution_history;
+      } else if (typeof challengeData.best_solution_history === 'string') {
+        try {
+          dailyChallengeHistory = JSON.parse(challengeData.best_solution_history);
+        } catch (e) {
+          console.error('Error parsing best_solution_history JSON:', e);
+        }
+      }
+      
+      // Calculate moves from history (moves = path length - 1)
+      if (dailyChallengeHistory.length > 0) {
+        dailyChallengeMoves = dailyChallengeHistory.length - 1;
+      }
+    }
+    
+    // Second priority: Get solution from leaderboard table
+    const { data: leaderboardData, error: leaderboardError } = await supabase
       .from(LEADERBOARD_TABLE)
       .select('username, moves, time_ms, score, history')
       .eq('date', yesterdayDate)
-      .order('score', { ascending: false })
+      .order('moves', { ascending: true })
       .limit(50); // Get top 50 to find the best one
     
-    if (error) {
-      console.error('Error fetching best solution from leaderboard:', error);
-      // Continue to fallback
-    }
+    let bestLeaderboardSolution = null;
+    let leaderboardHistory = [];
     
-    let bestSolution = null;
-    let historyArray = [];
-    
-    if (data && data.length > 0) {
-      // Sort by score DESC, then moves ASC, then time ASC
-      const sorted = data.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
+    if (!leaderboardError && leaderboardData && leaderboardData.length > 0) {
+      // Sort by moves ASC, then time ASC, then score DESC
+      const sorted = leaderboardData.sort((a, b) => {
         if (a.moves !== b.moves) return a.moves - b.moves;
-        return a.time_ms - b.time_ms;
+        if (a.time_ms !== b.time_ms) return a.time_ms - b.time_ms;
+        return b.score - a.score;
       });
       
-      bestSolution = sorted[0];
+      bestLeaderboardSolution = sorted[0];
       
       // Check if history exists in leaderboard entry
-      if (bestSolution.history) {
-        if (Array.isArray(bestSolution.history)) {
-          historyArray = bestSolution.history;
-        } else if (typeof bestSolution.history === 'string') {
+      if (bestLeaderboardSolution.history) {
+        if (Array.isArray(bestLeaderboardSolution.history)) {
+          leaderboardHistory = bestLeaderboardSolution.history;
+        } else if (typeof bestLeaderboardSolution.history === 'string') {
           try {
-            historyArray = JSON.parse(bestSolution.history);
+            leaderboardHistory = JSON.parse(bestLeaderboardSolution.history);
           } catch (e) {
             console.error('Error parsing history JSON:', e);
           }
@@ -164,47 +242,64 @@ export async function fetchYesterdayBestSolution(yesterdayDate) {
       }
     }
     
-    // If history is not available in leaderboard, fallback to daily_challenges table
-    if (historyArray.length === 0) {
-      const { data: challengeData, error: challengeError } = await supabase
-        .from(DAILY_CHALLENGES_TABLE)
-        .select('best_solution_history')
-        .eq('date', yesterdayDate)
-        .single();
-      
-      if (!challengeError && challengeData && challengeData.best_solution_history) {
-        // Parse the history from daily_challenges table
-        if (Array.isArray(challengeData.best_solution_history)) {
-          historyArray = challengeData.best_solution_history;
-        } else if (typeof challengeData.best_solution_history === 'string') {
-          try {
-            historyArray = JSON.parse(challengeData.best_solution_history);
-          } catch (e) {
-            console.error('Error parsing best_solution_history JSON:', e);
-          }
+    // Compare solutions and prioritize based on rules:
+    // 1. If daily_challenges has a solution, check if leaderboard has one
+    // 2. If moves count is the same, prioritize daily_challenges
+    // 3. Otherwise, use the one with fewer moves
+    
+    if (dailyChallengeMoves !== null && dailyChallengeHistory.length > 0) {
+      // We have a solution from daily_challenges
+      if (bestLeaderboardSolution) {
+        const leaderboardMoves = bestLeaderboardSolution.moves || Infinity;
+        
+        // If moves are the same, prioritize daily_challenges
+        if (dailyChallengeMoves === leaderboardMoves) {
+          return {
+            username: 'Daily Challenge',
+            moves: dailyChallengeMoves,
+            timeMs: 0,
+            score: 0,
+            history: dailyChallengeHistory,
+          };
         }
+        
+        // If daily_challenges has fewer moves, use it
+        if (dailyChallengeMoves < leaderboardMoves) {
+          return {
+            username: 'Daily Challenge',
+            moves: dailyChallengeMoves,
+            timeMs: 0,
+            score: 0,
+            history: dailyChallengeHistory,
+          };
+        }
+        
+        // If leaderboard has fewer moves, use it
+        return {
+          username: bestLeaderboardSolution.username,
+          moves: bestLeaderboardSolution.moves,
+          timeMs: bestLeaderboardSolution.time_ms,
+          score: bestLeaderboardSolution.score,
+          history: leaderboardHistory.length > 0 ? leaderboardHistory : dailyChallengeHistory,
+        };
+      } else {
+        // No leaderboard solution, use daily_challenges
+        return {
+          username: 'Daily Challenge',
+          moves: dailyChallengeMoves,
+          timeMs: 0,
+          score: 0,
+          history: dailyChallengeHistory,
+        };
       }
-    }
-    
-    // If we have a solution from leaderboard, return it (even if history is empty)
-    if (bestSolution) {
+    } else if (bestLeaderboardSolution) {
+      // Only leaderboard solution available
       return {
-        username: bestSolution.username,
-        moves: bestSolution.moves,
-        timeMs: bestSolution.time_ms,
-        score: bestSolution.score,
-        history: historyArray,
-      };
-    }
-    
-    // If no leaderboard entry but we have history from daily_challenges, return partial solution
-    if (historyArray.length > 0) {
-      return {
-        username: 'Unknown',
-        moves: historyArray.length - 1, // Approximate moves based on path length
-        timeMs: 0,
-        score: 0,
-        history: historyArray,
+        username: bestLeaderboardSolution.username,
+        moves: bestLeaderboardSolution.moves,
+        timeMs: bestLeaderboardSolution.time_ms,
+        score: bestLeaderboardSolution.score,
+        history: leaderboardHistory,
       };
     }
     
@@ -217,21 +312,23 @@ export async function fetchYesterdayBestSolution(yesterdayDate) {
 
 /**
  * Fetch all data needed for yesterday's challenge display
- * @returns {Promise<{challenge: {startTitle: string, goalTitle: string, date: string} | null, stats: {completionCount: number, averageMoves: number, averageTime: number}, bestSolution: {username: string, moves: number, timeMs: number, score: number, history: string[]} | null}>}
+ * @returns {Promise<{challenge: {startTitle: string, goalTitle: string, date: string} | null, stats: {completionCount: number, averageMoves: number, averageTime: number}, bestSolution: {username: string, moves: number, timeMs: number, score: number, history: string[]} | null}, highestScore: {username: string, moves: number, timeMs: number, score: number, history: string[]} | null}>}
  */
 export async function fetchYesterdayChallengeData() {
   const yesterdayDate = getYesterdayDateString();
   
-  const [challenge, stats, bestSolution] = await Promise.all([
+  const [challenge, stats, bestSolution, highestScore] = await Promise.all([
     fetchYesterdayChallenge(),
     fetchYesterdayCompletionStats(yesterdayDate),
     fetchYesterdayBestSolution(yesterdayDate),
+    fetchYesterdayHighestScore(yesterdayDate),
   ]);
   
   return {
     challenge,
     stats,
     bestSolution,
+    highestScore,
     date: yesterdayDate,
   };
 }

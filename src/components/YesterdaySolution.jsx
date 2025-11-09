@@ -16,12 +16,13 @@ function prettyTime(ms) {
 export function YesterdaySolution({ challengeData, onClose, onReplay }) {
   const { theme } = useTheme();
 
-  if (!challengeData || !challengeData.challenge || !challengeData.bestSolution) {
+  if (!challengeData || !challengeData.challenge) {
     return null;
   }
 
-  const { challenge, stats, bestSolution } = challengeData;
-  const solutionPath = bestSolution.history || [];
+  const { challenge, stats, bestSolution, highestScore } = challengeData;
+  // Use bestSolution (least moves) for the example path
+  const solutionPath = bestSolution?.history || [];
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4 overflow-y-auto">
@@ -136,62 +137,127 @@ export function YesterdaySolution({ challengeData, onClose, onReplay }) {
             </div>
           </div>
 
-          {/* Best Solution Stats */}
-          <div className={`p-2 sm:p-3 rounded-lg border-2 ${
-            theme === 'dark'
-              ? 'bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border-yellow-600'
-              : theme === 'classic'
-              ? 'bg-yellow-50 border-black'
-              : 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-400'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <Trophy className={`h-4 w-4 ${
-                  theme === 'dark' ? 'text-yellow-400' : theme === 'classic' ? 'text-black' : 'text-yellow-600'
-                }`} />
-                <h3 className={`font-semibold text-xs sm:text-sm ${
-                  theme === 'dark' ? 'text-yellow-200' : theme === 'classic' ? 'text-black' : 'text-yellow-900'
-                }`}>
-                  Best Solution
-                </h3>
-              </div>
-              {bestSolution.username && bestSolution.username !== 'Unknown' && (
-                <div className={`text-xs ${
+          {/* Winners Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Highest Score Winner */}
+            {highestScore && (
+              <div className={`p-2 sm:p-3 rounded-lg border-2 ${
+                theme === 'dark'
+                  ? 'bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border-yellow-600'
+                  : theme === 'classic'
+                  ? 'bg-yellow-50 border-black'
+                  : 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-400'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Trophy className={`h-4 w-4 ${
+                      theme === 'dark' ? 'text-yellow-400' : theme === 'classic' ? 'text-black' : 'text-yellow-600'
+                    }`} />
+                    <h3 className={`font-semibold text-xs sm:text-sm ${
+                      theme === 'dark' ? 'text-yellow-200' : theme === 'classic' ? 'text-black' : 'text-yellow-900'
+                    }`}>
+                      Highest Score
+                    </h3>
+                  </div>
+                  {highestScore.username && highestScore.username !== 'Unknown' && (
+                    <div className={`text-xs ${
+                      theme === 'dark' ? 'text-yellow-300' : theme === 'classic' ? 'text-black' : 'text-yellow-800'
+                    }`}>
+                      by <strong>{highestScore.username}</strong>
+                    </div>
+                  )}
+                </div>
+                
+                <div className={`flex items-center gap-2 sm:gap-3 flex-wrap ${
                   theme === 'dark' ? 'text-yellow-300' : theme === 'classic' ? 'text-black' : 'text-yellow-800'
                 }`}>
-                  by <strong>{bestSolution.username}</strong>
+                  {highestScore.moves > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Move className="h-3.5 w-3.5" />
+                      <span className="text-xs">
+                        <strong>{highestScore.moves}</strong> moves
+                      </span>
+                    </div>
+                  )}
+                  {highestScore.timeMs > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span className="text-xs">
+                        <strong>{prettyTime(highestScore.timeMs)}</strong>
+                      </span>
+                    </div>
+                  )}
+                  {highestScore.score > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Trophy className="h-3.5 w-3.5" />
+                      <span className="text-xs">
+                        Score: <strong>{highestScore.score}</strong>
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            
-            <div className={`flex items-center gap-2 sm:gap-3 flex-wrap ${
-              theme === 'dark' ? 'text-yellow-300' : theme === 'classic' ? 'text-black' : 'text-yellow-800'
-            }`}>
-              {bestSolution.moves > 0 && (
-                <div className="flex items-center gap-1">
-                  <Move className="h-3.5 w-3.5" />
-                  <span className="text-xs">
-                    <strong>{bestSolution.moves}</strong> moves
-                  </span>
+              </div>
+            )}
+
+            {/* Least Moves Winner */}
+            {bestSolution && (
+              <div className={`p-2 sm:p-3 rounded-lg border-2 ${
+                theme === 'dark'
+                  ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-600'
+                  : theme === 'classic'
+                  ? 'bg-green-50 border-black'
+                  : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-400'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Move className={`h-4 w-4 ${
+                      theme === 'dark' ? 'text-green-400' : theme === 'classic' ? 'text-black' : 'text-green-600'
+                    }`} />
+                    <h3 className={`font-semibold text-xs sm:text-sm ${
+                      theme === 'dark' ? 'text-green-200' : theme === 'classic' ? 'text-black' : 'text-green-900'
+                    }`}>
+                      Least Moves
+                    </h3>
+                  </div>
+                  {bestSolution.username && bestSolution.username !== 'Unknown' && bestSolution.username !== 'Daily Challenge' && (
+                    <div className={`text-xs ${
+                      theme === 'dark' ? 'text-green-300' : theme === 'classic' ? 'text-black' : 'text-green-800'
+                    }`}>
+                      by <strong>{bestSolution.username}</strong>
+                    </div>
+                  )}
                 </div>
-              )}
-              {bestSolution.timeMs > 0 && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span className="text-xs">
-                    <strong>{prettyTime(bestSolution.timeMs)}</strong>
-                  </span>
+                
+                <div className={`flex items-center gap-2 sm:gap-3 flex-wrap ${
+                  theme === 'dark' ? 'text-green-300' : theme === 'classic' ? 'text-black' : 'text-green-800'
+                }`}>
+                  {bestSolution.moves > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Move className="h-3.5 w-3.5" />
+                      <span className="text-xs">
+                        <strong>{bestSolution.moves}</strong> moves
+                      </span>
+                    </div>
+                  )}
+                  {bestSolution.timeMs > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span className="text-xs">
+                        <strong>{prettyTime(bestSolution.timeMs)}</strong>
+                      </span>
+                    </div>
+                  )}
+                  {bestSolution.score > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Trophy className="h-3.5 w-3.5" />
+                      <span className="text-xs">
+                        Score: <strong>{bestSolution.score}</strong>
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
-              {bestSolution.score > 0 && (
-                <div className="flex items-center gap-1">
-                  <Trophy className="h-3.5 w-3.5" />
-                  <span className="text-xs">
-                    Score: <strong>{bestSolution.score}</strong>
-                  </span>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Example Solution Path */}
