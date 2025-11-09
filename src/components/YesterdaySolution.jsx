@@ -210,7 +210,7 @@ export function YesterdaySolution({ challengeData, onClose, onReplay }) {
                 <h3 className={`font-semibold text-xs sm:text-sm ${
                   theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
                 }`}>
-                  Example Solution Path ({solutionPath.length} steps)
+                  Example Solution Path ({solutionPath.length-1} steps)
                 </h3>
               </div>
               

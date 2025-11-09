@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Timer, Target, Shuffle, Flag, History, Trophy, Compass, X, ArrowLeft, Loader2, Calendar, Eye, EyeOff, PlayCircle, BookOpen, ArrowRight, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, HelpCircle, Users, Share2 } from "lucide-react";
+import { Timer, Target, Shuffle, Flag, History, Trophy, Compass, X, ArrowLeft, Loader2, Calendar, Eye, EyeOff, PlayCircle, BookOpen, ArrowRight, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, HelpCircle, Users, Share2, Edit2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -307,40 +307,40 @@ async function fetchLinks(title) {
   const MAX_LINKS = 2000;
   
   try {
-    do {
-      let url = `${API}&action=query&prop=links&plnamespace=0&pllimit=500&format=json&titles=${encodeURIComponent(title)}`;
-      if (continueToken) {
-        url += `&plcontinue=${encodeURIComponent(continueToken)}`;
-      }
-      
-      const res = await fetch(url);
+  do {
+    let url = `${API}&action=query&prop=links&plnamespace=0&pllimit=500&format=json&titles=${encodeURIComponent(title)}`;
+    if (continueToken) {
+      url += `&plcontinue=${encodeURIComponent(continueToken)}`;
+    }
+    
+    const res = await fetch(url);
       if (!res.ok) return [];
       
-      const data = await res.json();
-      const pages = data?.query?.pages || {};
-      const firstPage = Object.values(pages)[0];
+    const data = await res.json();
+    const pages = data?.query?.pages || {};
+    const firstPage = Object.values(pages)[0];
       
       // Check if page is missing (non-existent article)
       if (firstPage?.missing !== undefined) {
         return [];
       }
       
-      const links = (firstPage?.links || []).map((l) => l.title);
-      allLinks = allLinks.concat(links);
-      
-      // Stop if we've reached the limit
-      if (allLinks.length >= MAX_LINKS) {
-        allLinks = allLinks.slice(0, MAX_LINKS);
-        break;
-      }
-      
-      // Check if there are more results
-      continueToken = data?.continue?.plcontinue || null;
-    } while (continueToken);
+    const links = (firstPage?.links || []).map((l) => l.title);
+    allLinks = allLinks.concat(links);
     
-    // Cache the result
-    linksCache.set(cacheKey, allLinks);
-    return allLinks;
+    // Stop if we've reached the limit
+    if (allLinks.length >= MAX_LINKS) {
+      allLinks = allLinks.slice(0, MAX_LINKS);
+      break;
+    }
+    
+    // Check if there are more results
+    continueToken = data?.continue?.plcontinue || null;
+  } while (continueToken);
+  
+  // Cache the result
+  linksCache.set(cacheKey, allLinks);
+  return allLinks;
   } catch (e) {
     console.error('Error fetching links:', e);
     return [];
@@ -376,19 +376,19 @@ async function fetchSummary(title) {
 
   const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const summary = {
-      title: data.title,
-      description: data.description,
-      extract: data.extract,
-      thumbnail: data.thumbnail?.source || null,
-      url: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
-    };
-    // Cache the result
-    summaryCache.set(cacheKey, summary);
-    return summary;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const summary = {
+    title: data.title,
+    description: data.description,
+    extract: data.extract,
+    thumbnail: data.thumbnail?.source || null,
+    url: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
+  };
+  // Cache the result
+  summaryCache.set(cacheKey, summary);
+  return summary;
   } catch (e) {
     console.error('Error fetching article summary:', e);
     return null;
@@ -949,18 +949,16 @@ export default function WikipediaJourneyGame() {
       // finalTime.current is already set when won becomes true, so we don't need to set it again here
       // But ensure it's set if somehow it wasn't captured earlier
       if (finalTime.current === 0 && timer > 0) {
-        finalTime.current = timer;
+      finalTime.current = timer;
       }
       
       // Track game completion
       const timeToUse = finalTime.current;
       const score = finalScore;
-      // Convert milliseconds to seconds for database storage
-      const timeInSeconds = Math.floor(timeToUse / 1000);
       trackGameCompletion(gameSessionId.current, {
         score: score,
         moves: moveCount,
-        timeMs: timeInSeconds,
+        timeMs: timeToUse,
         history: history,
       }).catch(err => {
         console.error('Failed to track game completion:', err);
@@ -1024,8 +1022,7 @@ export default function WikipediaJourneyGame() {
     const currentUsername = getStoredUsername() || getOrCreateUsername();
     const score = finalScore;
     const moves = moveCount;
-    // Convert milliseconds to seconds for database storage
-    const timeInSeconds = Math.floor(finalTime.current / 1000);
+    const timeMs = finalTime.current;
 
     try {
       setSubmittingScore(true);
@@ -1037,7 +1034,7 @@ export default function WikipediaJourneyGame() {
             username: currentUsername,
             score: score,
             moves: moves,
-            time_ms: timeInSeconds,
+            time_ms: timeMs,
             date: dateString,
             start_title: startTitle,
             goal_title: goalTitle,
@@ -2340,15 +2337,14 @@ export default function WikipediaJourneyGame() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setShowUsernameModal(true)}
-                    className="h-8 w-8 sm:h-10 sm:w-10 px-2"
-                    title={`Change username (${username})`}
+                    onClick={() => {
+                      setShowUsernameModal(true);
+                      setShowLeaderboard(false);
+                    }}
+                    className="h-8 w-8 sm:h-10 sm:w-10"
+                    title="Change username"
                   >
-                    <span className={`text-xs sm:text-sm truncate max-w-[80px] ${
-                      theme === 'dark' ? 'text-gray-300' : theme === 'classic' ? 'text-black' : 'text-slate-600'
-                    }`}>
-                      {username}
-                    </span>
+                    <Edit2 className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                   <Button
                     variant="ghost"

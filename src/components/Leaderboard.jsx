@@ -182,7 +182,7 @@ export function Leaderboard({ onRefresh }) {
                     }`}>
                       <span>Score: <strong>{entry.score}</strong></span>
                       <span>Moves: <strong>{entry.moves}</strong></span>
-                      <span>Time: <strong>{prettyTime(entry.time_ms * 1000)}</strong></span>
+                      <span>Time: <strong>{prettyTime(entry.time_ms)}</strong></span>
                     </div>
                   </div>
                 </div>
