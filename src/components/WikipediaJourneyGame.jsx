@@ -438,6 +438,12 @@ export default function WikipediaJourneyGame() {
   const [timeUntilReset, setTimeUntilReset] = useState(getTimeUntilMidnight());
   const timer = useTimer(gameActive && !won);
   const dailyChallengeLoadedRef = useRef(false);
+  
+  // Refs for game state tracking
+  const finalTime = useRef(0);
+  const confettiTriggered = useRef(false);
+  const gameSessionId = useRef(null);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [visibleLinksCount, setVisibleLinksCount] = useState(100);
@@ -884,11 +890,14 @@ export default function WikipediaJourneyGame() {
       const normalizedGoal = goalTitle.trim().toLowerCase();
       
       if (normalizedCurrent === normalizedGoal) {
+        // Capture timer value BEFORE setting won to true to avoid race condition
+        // The timer stops when won becomes true, so we need to capture it synchronously
+        finalTime.current = timer;
         setWon(true);
         setGameActive(false);
       }
     }
-  }, [currentTitle, goalTitle, gameActive]);
+  }, [currentTitle, goalTitle, gameActive, timer]);
 
   // Fetch summaries for start and goal pages when titles change
   useEffect(() => {
@@ -909,9 +918,6 @@ export default function WikipediaJourneyGame() {
   }, [goalTitle]);
 
   const moveCount = history.length ? history.length - 1 : 0;
-  const finalTime = useRef(0);
-  const confettiTriggered = useRef(false);
-  const gameSessionId = useRef(null);
 
   // Update game history in database at each step
   useEffect(() => {
@@ -940,7 +946,11 @@ export default function WikipediaJourneyGame() {
   useEffect(() => {
     if (won && !confettiTriggered.current) {
       confettiTriggered.current = true;
-      finalTime.current = timer;
+      // finalTime.current is already set when won becomes true, so we don't need to set it again here
+      // But ensure it's set if somehow it wasn't captured earlier
+      if (finalTime.current === 0 && timer > 0) {
+        finalTime.current = timer;
+      }
       
       // Track game completion
       const timeToUse = finalTime.current;
