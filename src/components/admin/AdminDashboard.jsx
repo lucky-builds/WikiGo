@@ -11,6 +11,7 @@ import {
   fetchGamePerformanceStats,
   fetchTimeBasedTrends,
 } from '@/lib/adminStats';
+import { fetchWebAnalyticsSummary } from '@/lib/vercelAnalytics';
 import {
   StatCard,
   AdminLineChart,
@@ -34,6 +35,9 @@ import {
   Calendar,
   RefreshCw,
   BarChart3,
+  Globe,
+  Eye,
+  MousePointerClick,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -74,6 +78,10 @@ export function AdminDashboard() {
   // Time-based trends
   const [trendsData, setTrendsData] = useState([]);
   const [trendsLoading, setTrendsLoading] = useState(false);
+  
+  // Vercel Analytics
+  const [webAnalytics, setWebAnalytics] = useState(null);
+  const [webAnalyticsLoading, setWebAnalyticsLoading] = useState(false);
 
   const loadAllData = async (isRefresh = false) => {
     if (isRefresh) {
@@ -94,6 +102,7 @@ export function AdminDashboard() {
         loadLeaderboardStats(),
         loadGamePerformanceStats(),
         loadTrendsData(),
+        loadWebAnalytics(),
       ]);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -160,6 +169,18 @@ export function AdminDashboard() {
       console.error('Error loading trends data:', error);
     } finally {
       setTrendsLoading(false);
+    }
+  };
+
+  const loadWebAnalytics = async () => {
+    setWebAnalyticsLoading(true);
+    try {
+      const analytics = await fetchWebAnalyticsSummary(30);
+      setWebAnalytics(analytics);
+    } catch (error) {
+      console.error('Error loading web analytics:', error);
+    } finally {
+      setWebAnalyticsLoading(false);
     }
   };
 
@@ -460,6 +481,123 @@ export function AdminDashboard() {
             data={gamePerformanceStats?.categoryStats || {}}
             loading={gamePerformanceLoading}
           />
+        </div>
+
+        {/* Vercel Web Analytics */}
+        <div className="space-y-4">
+          <h2 className={`text-xl font-semibold ${
+            theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+          }`}>
+            Web Analytics (Vercel)
+          </h2>
+          {webAnalytics === null && !webAnalyticsLoading ? (
+            <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
+              <CardContent className="p-4">
+                <p className={`text-sm text-center ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-slate-500'
+                }`}>
+                  Vercel Analytics not configured. See README for setup instructions.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  title="Pageviews"
+                  value={webAnalytics?.pageviews?.toLocaleString() || '0'}
+                  icon={Eye}
+                  loading={webAnalyticsLoading}
+                />
+                <StatCard
+                  title="Visitors"
+                  value={webAnalytics?.visitors?.toLocaleString() || '0'}
+                  icon={Users}
+                  loading={webAnalyticsLoading}
+                />
+                <StatCard
+                  title="Top Pages"
+                  value={webAnalytics?.topPages?.length || 0}
+                  icon={Globe}
+                  loading={webAnalyticsLoading}
+                  subtitle={`${webAnalytics?.topPages?.length || 0} tracked pages`}
+                />
+                <StatCard
+                  title="Top Referrers"
+                  value={webAnalytics?.topReferrers?.length || 0}
+                  icon={MousePointerClick}
+                  loading={webAnalyticsLoading}
+                  subtitle={`${webAnalytics?.topReferrers?.length || 0} sources`}
+                />
+              </div>
+              {webAnalytics && (webAnalytics.topPages?.length > 0 || webAnalytics.topReferrers?.length > 0) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {webAnalytics.topPages?.length > 0 && (
+                    <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
+                      <CardHeader className="p-4">
+                        <CardTitle className={`text-base font-semibold ${
+                          theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+                        }`}>
+                          Top Pages
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4">
+                        <div className="space-y-2">
+                          {webAnalytics.topPages.slice(0, 10).map((page, index) => (
+                            <div key={index} className={`flex justify-between items-center p-2 rounded ${
+                              theme === 'dark' ? 'bg-slate-700' : theme === 'classic' ? 'bg-slate-100 border border-black' : 'bg-slate-50'
+                            }`}>
+                              <span className={`text-sm ${
+                                theme === 'dark' ? 'text-gray-300' : theme === 'classic' ? 'text-black' : 'text-slate-700'
+                              }`}>
+                                {page.path || page.page || 'Unknown'}
+                              </span>
+                              <span className={`text-sm font-semibold ${
+                                theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+                              }`}>
+                                {page.views?.toLocaleString() || page.count?.toLocaleString() || 0}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {webAnalytics.topReferrers?.length > 0 && (
+                    <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : theme === 'classic' ? 'bg-white border-2 border-black' : 'bg-white'}`}>
+                      <CardHeader className="p-4">
+                        <CardTitle className={`text-base font-semibold ${
+                          theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+                        }`}>
+                          Top Referrers
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4">
+                        <div className="space-y-2">
+                          {webAnalytics.topReferrers.slice(0, 10).map((ref, index) => (
+                            <div key={index} className={`flex justify-between items-center p-2 rounded ${
+                              theme === 'dark' ? 'bg-slate-700' : theme === 'classic' ? 'bg-slate-100 border border-black' : 'bg-slate-50'
+                            }`}>
+                              <span className={`text-sm truncate ${
+                                theme === 'dark' ? 'text-gray-300' : theme === 'classic' ? 'text-black' : 'text-slate-700'
+                              }`}>
+                                {ref.referrer || ref.source || 'Direct'}
+                              </span>
+                              <span className={`text-sm font-semibold ${
+                                theme === 'dark' ? 'text-white' : theme === 'classic' ? 'text-black' : 'text-slate-900'
+                              }`}>
+                                {ref.count?.toLocaleString() || 0}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Time-based Trends */}

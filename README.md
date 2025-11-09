@@ -245,8 +245,56 @@ The admin dashboard includes:
 - **Leaderboard Analytics**: Score distributions, top players, moves vs time correlations
 - **Game Performance**: Average moves/time, popular articles, category usage statistics
 - **Time-based Trends**: Daily, weekly, and monthly trend analysis with interactive charts
+- **Vercel Web Analytics**: Pageviews, visitors, top pages, and referrers (requires API setup)
 
 All data is fetched in real-time from your Supabase database and includes interactive charts and sortable tables.
+
+### Vercel Analytics Integration
+
+To display Vercel Analytics data in the admin dashboard:
+
+1. **Get your Vercel API Token**:
+   - Log in to your [Vercel account](https://vercel.com)
+   - Click on your profile picture in the top-right corner
+   - Select **"Settings"** from the dropdown menu
+   - In the left-hand sidebar, click on **"Tokens"**
+   - Click the **"Create"** button
+   - Provide a descriptive name (e.g., "Admin Dashboard Integration")
+   - Choose the appropriate scope/permissions (read access for analytics)
+   - Set an expiration date if desired (optional)
+   - Click **"Create Token"**
+   - **Important**: Copy the token immediately - it will only be displayed once!
+
+2. **Get your Project ID**:
+   - Go to your project in Vercel dashboard
+   - Click on **"Settings"** tab
+   - Find your **Project ID** in the project settings (or you can use your project name)
+
+3. **Set Environment Variables in Vercel**:
+   - Go to your Vercel project settings > **Environment Variables**
+   - Click **"Add New"**
+   - Add the following variables:
+     - **Name**: `VERCEL_API_TOKEN`
+     - **Value**: Paste your API token from step 1
+     - **Environment**: Select "Production", "Preview", and/or "Development" as needed
+     - Click **"Save"**
+   - (Optional but recommended) Add:
+     - **Name**: `VERCEL_PROJECT_ID`
+     - **Value**: Your project ID from step 2
+     - **Environment**: Select "Production", "Preview", and/or "Development" as needed
+     - Click **"Save"**
+
+   **Important**: These are server-side environment variables (no `VITE_` prefix needed). They are used by the API route (`/api/vercel-analytics.js`), not the client-side code.
+
+4. **Deploy and Test**:
+   - The API route (`/api/vercel-analytics.js`) will automatically work once deployed to Vercel
+   - Access your admin dashboard and the Vercel Analytics section should populate with data
+
+**Note**: 
+- The Vercel Analytics API route is a serverless function that proxies requests to Vercel's API
+- Make sure your project is deployed to Vercel for the API route to function
+- The token must have appropriate permissions to read analytics data
+- For more details, see [Vercel's guide on API Access Tokens](https://vercel.com/guides/how-do-i-use-a-vercel-api-access-token)
 
 ## 📧 Support
 
