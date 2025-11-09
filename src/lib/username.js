@@ -1,21 +1,27 @@
 // Username management utilities
 
+import { uniqueNamesGenerator, adjectives, colors, animals } from 'unique-names-generator';
+
 const USERNAME_STORAGE_KEY = 'wikiGo-username'
 const USERNAME_AUTO_GENERATED_KEY = 'wikiGo-username-auto-generated'
 
 /**
- * Generate a random username
- * Format: Player_XXXXXX (where X is alphanumeric)
+ * Generate a random username using unique-names-generator
+ * Format: {Adjective}{Color}{Animal} or {Adjective}{Animal}
+ * Example: SwiftBlueTiger, BraveEagle, CleverWolf
+ * Uses the library's built-in dictionaries for maximum variety
  */
 export function generateRandomUsername() {
-  const adjectives = ['Swift', 'Clever', 'Bold', 'Quick', 'Wise', 'Sharp', 'Bright', 'Smart', 'Fast', 'Brave'];
-  const nouns = ['Explorer', 'Navigator', 'Seeker', 'Traveler', 'Pioneer', 'Voyager', 'Wanderer', 'Adventurer', 'Scout', 'Pathfinder'];
+  // Generate a unique name using the library's built-in dictionaries
+  // This gives us access to hundreds of words, not just 30*20 combinations
+  const name = uniqueNamesGenerator({
+    dictionaries: [adjectives, colors, animals],
+    separator: '', // No separator for username format
+    length: 3, // Use 3 words (adjective + color + animal) for more variety
+    style: 'capital', // Capitalize each word
+  });
   
-  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-  const randomNum = Math.floor(Math.random() * 10000);
-  
-  return `${randomAdjective}${randomNoun}${randomNum}`;
+  return name;
 }
 
 /**

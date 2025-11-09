@@ -23,7 +23,8 @@
     "react-intersection-observer": "^10.0.0",
     "react-router-dom": "^7.9.5",
     "recharts": "^3.3.0",
-    "tailwind-merge": "^2.0.0"
+    "tailwind-merge": "^2.0.0",
+    "unique-names-generator": "^4.7.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
