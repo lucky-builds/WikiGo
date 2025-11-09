@@ -42,62 +42,87 @@ export default async function handler(req, res) {
       return d.toISOString().split('T')[0];
     })();
 
-    // Fetch analytics data from Vercel API
-    // Note: This uses Vercel's Analytics API v2
-    const analyticsUrl = `https://vercel.com/api/v1/deployments/${projectIdEnv}/analytics?from=${startDate}&to=${endDate}`;
+    // Vercel Analytics API endpoint
+    // Note: Vercel Analytics API structure may vary. Try multiple endpoints.
+    // Option 1: Analytics endpoint (if available)
+    const analyticsUrl = `https://api.vercel.com/v1/analytics/${projectIdEnv}?from=${startDate}&to=${endDate}`;
     
-    // Alternative: Use the web analytics endpoint if available
-    // For web analytics (pageviews, visitors), we need to use a different endpoint
-    const webAnalyticsUrl = `https://vercel.com/api/web/analytics/${projectIdEnv}?from=${startDate}&to=${endDate}`;
+    // Option 2: Web Analytics endpoint (alternative format)
+    const webAnalyticsUrl = `https://api.vercel.com/v1/web-analytics/${projectIdEnv}?from=${startDate}&to=${endDate}`;
+    
+    // Option 3: Project analytics endpoint
+    const projectAnalyticsUrl = `https://api.vercel.com/v1/projects/${projectIdEnv}/analytics?from=${startDate}&to=${endDate}`;
 
-    const response = await fetch(webAnalyticsUrl, {
+    // Try the primary analytics endpoint first
+    let response = await fetch(analyticsUrl, {
       headers: {
         'Authorization': `Bearer ${vercelToken}`,
         'Content-Type': 'application/json',
       },
     });
 
-    if (!response.ok) {
-      // If web analytics endpoint doesn't work, try the deployments endpoint
-      const deploymentsResponse = await fetch(analyticsUrl, {
+    // If that fails, try alternative endpoints
+    if (!response.ok && response.status === 404) {
+      response = await fetch(webAnalyticsUrl, {
         headers: {
           'Authorization': `Bearer ${vercelToken}`,
           'Content-Type': 'application/json',
         },
       });
+    }
 
-      if (!deploymentsResponse.ok) {
-        throw new Error(`Vercel API error: ${deploymentsResponse.status} ${deploymentsResponse.statusText}`);
+    if (!response.ok && response.status === 404) {
+      response = await fetch(projectAnalyticsUrl, {
+        headers: {
+          'Authorization': `Bearer ${vercelToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText };
       }
 
-      const deploymentsData = await deploymentsResponse.json();
-      
-      // Transform deployment data to analytics format
-      return res.status(200).json({
-        pageviews: deploymentsData.pageviews || 0,
-        visitors: deploymentsData.visitors || 0,
-        topPages: [],
-        topReferrers: [],
-        topCountries: [],
-        topDevices: [],
-        topBrowsers: [],
-        topOS: [],
-        deployments: deploymentsData,
+      // Log the error for debugging (check Vercel function logs)
+      console.error('Vercel API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData,
+        triedUrls: [analyticsUrl, webAnalyticsUrl, projectAnalyticsUrl],
+      });
+
+      // Return a more helpful error message
+      return res.status(response.status).json({
+        error: 'Vercel Analytics API not available',
+        message: errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+        status: response.status,
+        note: 'Vercel Analytics API may require specific permissions or may not be publicly available. Check Vercel function logs for details.',
+        details: errorData,
       });
     }
 
     const data = await response.json();
     
+    // Vercel Analytics API returns data in different formats
+    // Handle both the analytics response and transform it to our format
+    const analyticsData = data.analytics || data;
+    
     // Return formatted analytics data
     return res.status(200).json({
-      pageviews: data.pageviews || 0,
-      visitors: data.visitors || 0,
-      topPages: data.topPages || [],
-      topReferrers: data.topReferrers || [],
-      topCountries: data.topCountries || [],
-      topDevices: data.topDevices || [],
-      topBrowsers: data.topBrowsers || [],
-      topOS: data.topOS || [],
+      pageviews: analyticsData.pageviews || analyticsData.views || 0,
+      visitors: analyticsData.visitors || analyticsData.uniqueVisitors || 0,
+      topPages: analyticsData.topPages || analyticsData.pages || [],
+      topReferrers: analyticsData.topReferrers || analyticsData.referrers || [],
+      topCountries: analyticsData.topCountries || analyticsData.countries || [],
+      topDevices: analyticsData.topDevices || analyticsData.devices || [],
+      topBrowsers: analyticsData.topBrowsers || analyticsData.browsers || [],
+      topOS: analyticsData.topOS || analyticsData.operatingSystems || [],
       raw: data,
     });
 
@@ -105,7 +130,8 @@ export default async function handler(req, res) {
     console.error('Error fetching Vercel Analytics:', error);
     return res.status(500).json({ 
       error: 'Failed to fetch analytics',
-      message: error.message 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 }
