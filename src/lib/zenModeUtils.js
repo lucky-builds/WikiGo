@@ -5,6 +5,8 @@ import { getStoredUsername } from './username';
 
 // Cache key for practice game summaries in localStorage
 const PRACTICE_GAMES_SUMMARIES_CACHE_KEY = 'wikiGo-practice-games-summaries';
+// Local storage key for completed Zen Mode games count
+const ZEN_MODE_COMPLETED_COUNT_KEY = 'wikiGo-zen-mode-completed-count';
 
 /**
  * Fetch summary from Wikipedia API
@@ -117,14 +119,31 @@ export async function fetchPracticeGameSummaries(practiceGames) {
 }
 
 /**
- * Fetch all practice games from the practice_games table
- * @returns {Promise<Array<{id: string, start_title: string, goal_title: string, solution_history: string[]}>>}
+ * Get today's date string in YYYY-MM-DD format
+ * @returns {string} Today's date string
+ */
+function getDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Fetch practice games for today's date
+ * Falls back to games without dates if no games exist for today
+ * @returns {Promise<Array<{id: string, start_title: string, goal_title: string, solution_history: string[], date?: string}>>}
  */
 export async function fetchPracticeGames() {
   try {
-    const { data, error } = await supabase
+    const today = getDateString();
+    
+    // First, try to fetch games for today's date
+    let { data, error } = await supabase
       .from(PRACTICE_GAMES_TABLE)
-      .select('id, start_title, goal_title, solution_history')
+      .select('id, start_title, goal_title, solution_history, date')
+      .eq('date', today)
       .order('created_at', { ascending: true })
       .limit(5);
 
@@ -133,20 +152,70 @@ export async function fetchPracticeGames() {
       throw error;
     }
 
+    // If no games for today, fall back to games without dates (legacy games)
+    if (!data || data.length === 0) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from(PRACTICE_GAMES_TABLE)
+        .select('id, start_title, goal_title, solution_history, date')
+        .is('date', null)
+        .order('created_at', { ascending: true })
+        .limit(5);
+
+      if (fallbackError) {
+        console.error('Error fetching fallback practice games:', fallbackError);
+        throw fallbackError;
+      }
+
+      data = fallbackData;
+    }
+
+    // If still no games, try getting any games (for backward compatibility)
+    if (!data || data.length === 0) {
+      const { data: anyData, error: anyError } = await supabase
+        .from(PRACTICE_GAMES_TABLE)
+        .select('id, start_title, goal_title, solution_history, date')
+        .order('created_at', { ascending: true })
+        .limit(5);
+
+      if (anyError) {
+        console.error('Error fetching any practice games:', anyError);
+        throw anyError;
+      }
+
+      data = anyData;
+    }
+
     if (!data || data.length === 0) {
       console.warn('No practice games found in database');
       return [];
     }
 
-    // Parse solution_history if it's a string
-    return data.map(game => ({
-      ...game,
-      solution_history: Array.isArray(game.solution_history) 
-        ? game.solution_history 
-        : (typeof game.solution_history === 'string' 
-          ? JSON.parse(game.solution_history) 
-          : [])
-    }));
+    // Parse solution_history if it's a string, or create minimal path if NULL
+    return data.map(game => {
+      let solutionHistory = [];
+      
+      if (game.solution_history) {
+        if (Array.isArray(game.solution_history)) {
+          solutionHistory = game.solution_history;
+        } else if (typeof game.solution_history === 'string') {
+          try {
+            solutionHistory = JSON.parse(game.solution_history);
+          } catch {
+            solutionHistory = [];
+          }
+        }
+      }
+      
+      // If solution_history is NULL or empty, create minimal path [start, goal]
+      if (!solutionHistory || solutionHistory.length === 0) {
+        solutionHistory = [game.start_title, game.goal_title];
+      }
+      
+      return {
+        ...game,
+        solution_history: solutionHistory,
+      };
+    });
   } catch (err) {
     console.error('Failed to fetch practice games:', err);
     return [];
@@ -308,5 +377,74 @@ export async function checkAllZenModeGameStatuses(username, practiceGames) {
   }
 
   return statusMap;
+}
+
+/**
+ * Get the count of completed Zen Mode games from local storage
+ * @returns {number} - Count of completed games
+ */
+export function getZenModeCompletedCount() {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const count = localStorage.getItem(ZEN_MODE_COMPLETED_COUNT_KEY);
+    return count ? parseInt(count, 10) : 0;
+  } catch (e) {
+    console.error('Error reading Zen Mode completed count from localStorage:', e);
+    return 0;
+  }
+}
+
+/**
+ * Set the count of completed Zen Mode games in local storage
+ * @param {number} count - Count of completed games
+ */
+export function setZenModeCompletedCount(count) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ZEN_MODE_COMPLETED_COUNT_KEY, count.toString());
+  } catch (e) {
+    console.error('Error saving Zen Mode completed count to localStorage:', e);
+  }
+}
+
+/**
+ * Increment the count of completed Zen Mode games in local storage
+ */
+export function incrementZenModeCompletedCount() {
+  const currentCount = getZenModeCompletedCount();
+  setZenModeCompletedCount(currentCount + 1);
+}
+
+/**
+ * Update the completed count based on game statuses
+ * @param {Map<string, 'completed' | 'solution_viewed' | 'available'>} gameStatuses - Map of game statuses
+ * @param {number} totalGames - Total number of Zen Mode games
+ */
+export function updateZenModeCompletedCount(gameStatuses, totalGames) {
+  if (!gameStatuses || gameStatuses.size === 0) {
+    setZenModeCompletedCount(0);
+    return;
+  }
+
+  let completedCount = 0;
+  for (const [gameId, status] of gameStatuses.entries()) {
+    if (status === 'completed' || status === 'solution_viewed') {
+      completedCount++;
+    }
+  }
+
+  // Ensure count doesn't exceed total games
+  const finalCount = Math.min(completedCount, totalGames);
+  setZenModeCompletedCount(finalCount);
+}
+
+/**
+ * Check if all Zen Mode games are completed based on local storage
+ * @param {number} totalGames - Total number of Zen Mode games (default: 5)
+ * @returns {boolean} - True if all games are completed
+ */
+export function areAllZenModeGamesCompleted(totalGames = 5) {
+  const completedCount = getZenModeCompletedCount();
+  return completedCount >= totalGames;
 }
 

@@ -26,6 +26,7 @@ import {
   CategoryStatsTable,
 } from '@/components/admin/AdminTables';
 import { DailyChallengeManager } from '@/components/admin/DailyChallengeManager';
+import { PracticeGamesManager } from '@/components/admin/PracticeGamesManager';
 import { LatestGameMatchesTable } from '@/components/admin/LatestGameMatchesTable';
 import {
   Gamepad2,
@@ -361,6 +362,20 @@ export function AdminDashboard() {
           <DailyChallengeManager
             onSuccess={() => {
               loadDailyChallengeStats();
+            }}
+          />
+        </div>
+
+        {/* Practice Games Management (Zen Mode) */}
+        <div className="space-y-4">
+          <h2 className={`text-xl font-semibold ${
+            theme === 'dark' ? 'text-white' : 'text-slate-900'
+          }`}>
+            Practice Games Management (Zen Mode)
+          </h2>
+          <PracticeGamesManager
+            onSuccess={() => {
+              // Optionally refresh data if needed
             }}
           />
         </div>

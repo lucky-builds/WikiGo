@@ -9,6 +9,7 @@ export function GameModeTiles({
   isDailyChallengeCompleted, 
   onStartDailyChallenge, 
   onStartZenMode,
+  isAllZenModeCompleted = false,
   minimized = false 
 }) {
   const { theme } = useTheme();
@@ -123,8 +124,8 @@ export function GameModeTiles({
           </Card>
         )}
 
-        {/* Zen Mode Tile */}
-        {onStartZenMode && (
+        {/* Zen Mode Tile - Show when not all completed */}
+        {onStartZenMode && !isAllZenModeCompleted && (
           <Card
             onClick={onStartZenMode}
             className={`cursor-pointer transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl overflow-hidden group ${
@@ -148,6 +149,47 @@ export function GameModeTiles({
                   {!minimized && (
                     <p className={`${subtitleSize} font-semibold drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] text-emerald-100`} style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>
                       Practice without leaderboard impact
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Zen Mode Completed Tile - Show when all completed */}
+        {onStartZenMode && isAllZenModeCompleted && (
+          <Card
+            className={`transition-all duration-300 overflow-hidden ${
+              theme === 'dark'
+                ? 'border-4 border-green-500/50 shadow-green-500/20 hover:border-green-400 hover:shadow-green-500/40'
+                : 'border-4 border-green-500/50 shadow-green-500/20 hover:border-green-400 hover:shadow-green-500/40'
+            }`}
+          >
+            <CardContent className="p-0">
+              <div className={`relative w-full ${tileHeight} overflow-hidden`}>
+                <img 
+                  src="/ZenMode.jpg" 
+                  alt="Zen Mode" 
+                  className="w-full h-full object-cover grayscale"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
+                <div className={`absolute bottom-0 left-0 right-0 ${padding}`}>
+                  <h3 className={`${textSize} font-black mb-1 sm:mb-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] text-white text-center`} style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 20px rgba(16,185,129,0.5)' }}>
+                    Zen Mode
+                  </h3>
+                  
+                  {/* Completion Message */}
+                  <div className="mb-1 sm:mb-2 text-center">
+                    <p className={`${countdownSize} font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]`} style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 20px rgba(34,197,94,0.6)' }}>
+                      All Completed
+                    </p>
+                  </div>
+                  
+                  {/* Subtitle */}
+                  {!minimized && (
+                    <p className={`${subtitleSize} font-semibold drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] text-green-100 text-center`} style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>
+                      All practice games finished
                     </p>
                   )}
                 </div>

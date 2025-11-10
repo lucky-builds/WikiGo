@@ -4,7 +4,7 @@ import { Lightbulb } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { GameModeTiles } from './GameModeTiles';
 
-export function HeroSection({ onStartRandomGame, dailyChallenge, dailyChallengeHint, isDailyChallengeCompleted, onStartDailyChallenge, onStartZenMode, zenMode, username, onChangeUsername }) {
+export function HeroSection({ onStartRandomGame, dailyChallenge, dailyChallengeHint, isDailyChallengeCompleted, onStartDailyChallenge, onStartZenMode, zenMode, username, onChangeUsername, isAllZenModeCompleted = false }) {
   const { theme } = useTheme();
 
   return (
@@ -76,6 +76,7 @@ export function HeroSection({ onStartRandomGame, dailyChallenge, dailyChallengeH
         isDailyChallengeCompleted={isDailyChallengeCompleted}
         onStartDailyChallenge={onStartDailyChallenge}
         onStartZenMode={onStartZenMode}
+        isAllZenModeCompleted={isAllZenModeCompleted}
         minimized={false}
       />
     </div>

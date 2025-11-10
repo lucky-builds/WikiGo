@@ -21,7 +21,7 @@ import { UserStatsBar } from "@/components/UserStatsBar";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { YesterdaysTopPlayers } from "@/components/YesterdaysTopPlayers";
 import { WikipediaArticleViewer } from "@/components/game/WikipediaArticleViewer";
-import { fetchPracticeGames, checkAllZenModeGameStatuses, fetchPracticeGameSummaries } from "@/lib/zenModeUtils";
+import { fetchPracticeGames, checkAllZenModeGameStatuses, fetchPracticeGameSummaries, updateZenModeCompletedCount, areAllZenModeGamesCompleted } from "@/lib/zenModeUtils";
 // Lazy load heavy components for better initial load performance (especially on mobile)
 const GameResults = lazy(() => import("@/components/game/GameResults").then(module => ({ default: module.GameResults })));
 const ChallengeScreen = lazy(() => import("@/components/game/ChallengeScreen").then(module => ({ default: module.ChallengeScreen })));
@@ -491,6 +491,7 @@ export default function WikipediaJourneyGame() {
   const [zenModeSolutionData, setZenModeSolutionData] = useState(null);
   const [zenModeSolutionCompleted, setZenModeSolutionCompleted] = useState(false);
   const [loadingZenModeGames, setLoadingZenModeGames] = useState(false);
+  const [isAllZenModeCompleted, setIsAllZenModeCompleted] = useState(false);
 
   // Progress heuristic: Jaccard similarity of words in titles (toy metric)
   const progress = useMemo(() => {
@@ -592,6 +593,9 @@ export default function WikipediaJourneyGame() {
       const username = getStoredUsername() || 'anonymous';
       const statuses = await checkAllZenModeGameStatuses(username, games);
       setZenModeGameStatuses(statuses);
+      
+      // Update local storage count
+      updateZenModeCompletedCount(statuses, games.length);
     } catch (err) {
       console.error('Failed to fetch Zen Mode games:', err);
       setError("Failed to load Zen Mode games. Please try again.");
@@ -703,6 +707,8 @@ export default function WikipediaJourneyGame() {
     const username = getStoredUsername() || 'anonymous';
     const statuses = await checkAllZenModeGameStatuses(username, zenModeGames);
     setZenModeGameStatuses(statuses);
+    // Update local storage count
+    updateZenModeCompletedCount(statuses, zenModeGames.length);
   }
 
   async function startGame() {
@@ -1082,6 +1088,16 @@ export default function WikipediaJourneyGame() {
     preloadZenModeData();
   }, []);
 
+  // Check if all Zen Mode games are completed
+  useEffect(() => {
+    if (zenModeGames.length > 0) {
+      const allCompleted = areAllZenModeGamesCompleted(zenModeGames.length);
+      setIsAllZenModeCompleted(allCompleted);
+    } else {
+      setIsAllZenModeCompleted(false);
+    }
+  }, [zenModeGames, zenModeGameStatuses]);
+
   useEffect(() => {
     if (currentTitle && goalTitle && gameActive) {
       // Normalize titles for comparison (case-insensitive, trim whitespace)
@@ -1178,6 +1194,8 @@ export default function WikipediaJourneyGame() {
         const username = getStoredUsername() || 'anonymous';
         checkAllZenModeGameStatuses(username, zenModeGames).then(statuses => {
           setZenModeGameStatuses(statuses);
+          // Update local storage count
+          updateZenModeCompletedCount(statuses, zenModeGames.length);
         });
       }
       
@@ -1389,6 +1407,7 @@ export default function WikipediaJourneyGame() {
             zenMode={zenMode && showZenModeSelection}
             username={username}
             onChangeUsername={() => setShowUsernameModal(true)}
+            isAllZenModeCompleted={isAllZenModeCompleted}
           />
         )}
 
@@ -1418,6 +1437,7 @@ export default function WikipediaJourneyGame() {
                 setShowHomeScreen(false);
                 startZenMode();
               }}
+              isAllZenModeCompleted={isAllZenModeCompleted}
               minimized={true}
             />
           </div>
@@ -1455,6 +1475,7 @@ export default function WikipediaJourneyGame() {
                 setShowHomeScreen(false);
                 startZenMode();
               }}
+              isAllZenModeCompleted={isAllZenModeCompleted}
               minimized={true}
             />
           </div>
@@ -1509,6 +1530,7 @@ export default function WikipediaJourneyGame() {
                   setShowHomeScreen(false);
                   startZenMode();
                 }}
+                isAllZenModeCompleted={isAllZenModeCompleted}
                 minimized={true}
               />
             </div>

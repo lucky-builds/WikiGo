@@ -190,6 +190,13 @@ export function LatestGameMatchesTable() {
                                 Daily Challenge
                               </span>
                             )}
+                            {match.is_zen_mode && (
+                              <span className={`text-xs sm:text-xs px-2 py-1 rounded ${
+                                theme === 'dark' ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-100 text-emerald-800'
+                              }`}>
+                                Zen Mode
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Calendar className={`h-4 w-4 sm:h-4 sm:w-4 ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`} />
