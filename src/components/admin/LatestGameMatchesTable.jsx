@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, Target, User, Calendar } from 'lucide-react';
 import { fetchLatestGameMatches } from '@/lib/adminStats';
+import { prettyTime } from '@/lib/timeUtils';
 
 function formatTime(seconds) {
   if (!seconds) return '-';
@@ -232,7 +233,7 @@ export function LatestGameMatchesTable() {
                                   Time:
                                 </span>
                                 <span className={`text-base sm:text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                                  {formatTime(match.time_ms)}
+                                  {prettyTime(match.time_ms)}
                                 </span>
                               </div>
                             </>

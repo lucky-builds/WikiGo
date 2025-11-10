@@ -137,8 +137,8 @@ export async function fetchDailyChallengeStats(dateRange = null) {
             completions.reduce((sum, c) => sum + (c.moves || 0), 0) / completionCount
           );
           avgTime = Math.round(
-            completions.reduce((sum, c) => sum + (c.time_ms || 0), 0) / completionCount
-          );
+            completions.reduce((sum, c) => sum + (c.time_ms || 0), 0) / completionCount / 1000
+          ); // Convert from milliseconds to seconds
           avgScore = Math.round(
             completions.reduce((sum, c) => sum + (c.score || 0), 0) / completionCount
           );
@@ -216,7 +216,7 @@ export async function fetchUserActivityStats(dateRange = null) {
         ? Math.round(user.totalMoves / user.gamesCompleted)
         : 0,
       avgTime: user.gamesCompleted > 0
-        ? Math.round(user.totalTime / user.gamesCompleted)
+        ? Math.round(user.totalTime / user.gamesCompleted / 1000) // Convert from milliseconds to seconds
         : 0,
     }));
 
@@ -269,8 +269,8 @@ export async function fetchLeaderboardStats(dateRange = null) {
       entries.reduce((sum, e) => sum + (e.moves || 0), 0) / totalSubmissions
     );
     const avgTime = Math.round(
-      entries.reduce((sum, e) => sum + (e.time_ms || 0), 0) / totalSubmissions
-    );
+      entries.reduce((sum, e) => sum + (e.time_ms || 0), 0) / totalSubmissions / 1000
+    ); // Convert from milliseconds to seconds
 
     // Score distribution (bins of 100)
     const scoreBins = {};
@@ -339,8 +339,8 @@ export async function fetchGamePerformanceStats(dateRange = null) {
       completedGames.reduce((sum, g) => sum + (g.moves || 0), 0) / completedGames.length
     );
     const avgTime = Math.round(
-      completedGames.reduce((sum, g) => sum + (g.time_ms || 0), 0) / completedGames.length
-    );
+      completedGames.reduce((sum, g) => sum + (g.time_ms || 0), 0) / completedGames.length / 1000
+    ); // Convert from milliseconds to seconds
 
     // Popular start articles
     const startArticleCounts = {};
@@ -464,7 +464,7 @@ export async function fetchTimeBasedTrends(period = 'daily', days = 30) {
           ? Math.round(trend.totalMoves / trend.gamesCompleted)
           : 0,
         avgTime: trend.gamesCompleted > 0
-          ? Math.round(trend.totalTime / trend.gamesCompleted)
+          ? Math.round(trend.totalTime / trend.gamesCompleted / 1000) // Convert from milliseconds to seconds
           : 0,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));

@@ -268,8 +268,15 @@ export function LeaderboardTable({ data, loading }) {
     { key: 'moves', label: 'Moves' },
     {
       key: 'time_ms',
-      label: 'Time (s)',
-      render: (value) => value || '-',
+      label: 'Time',
+      render: (value) => {
+        if (!value) return '-';
+        // Convert milliseconds to seconds and format as MM:SS
+        const seconds = Math.floor(value / 1000);
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+      },
     },
     { key: 'start_title', label: 'Start' },
     { key: 'goal_title', label: 'Goal' },
