@@ -1181,14 +1181,11 @@ export default function WikipediaJourneyGame() {
       
       // Handle Zen Mode completion
       if (zenMode && selectedZenModeGame) {
-        // Show solution for completed Zen Mode game
-        setZenModeSolutionData({
-          start_title: selectedZenModeGame.start_title,
-          goal_title: selectedZenModeGame.goal_title,
-          solution_history: selectedZenModeGame.solution_history,
-        });
-        setZenModeSolutionCompleted(true);
-        setShowZenModeSolution(true);
+        // Don't show solution modal for completed games - just refresh statuses
+        // Clear any solution modal state to ensure it doesn't interfere
+        setShowZenModeSolution(false);
+        setZenModeSolutionData(null);
+        setZenModeSolutionCompleted(false);
         
         // Refresh game statuses
         const username = getStoredUsername() || 'anonymous';
@@ -2403,12 +2400,12 @@ export default function WikipediaJourneyGame() {
         />
       )}
 
-      {/* Zen Mode Solution Modal */}
-      {showZenModeSolution && zenModeSolutionData && (
+      {/* Zen Mode Solution Modal - Only show for forfeits, not for completed games */}
+      {showZenModeSolution && zenModeSolutionData && !zenModeSolutionCompleted && (
         <Suspense fallback={null}>
           <ZenModeSolution
             gameData={zenModeSolutionData}
-            isCompleted={zenModeSolutionCompleted}
+            isCompleted={false}
             onClose={() => {
               setShowZenModeSolution(false);
               setZenModeSolutionData(null);
