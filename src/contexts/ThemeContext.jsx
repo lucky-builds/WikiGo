@@ -6,6 +6,11 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     // Load from localStorage or default to 'light'
     const saved = localStorage.getItem('wiki-journey-theme');
+    // Migrate 'classic' theme to 'light' if found
+    if (saved === 'classic') {
+      localStorage.setItem('wiki-journey-theme', 'light');
+      return 'light';
+    }
     return saved || 'light';
   });
 

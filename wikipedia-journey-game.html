@@ -253,12 +253,6 @@
             </svg>
         );
 
-        const BookOpen = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-            </svg>
-        );
 
         // Utility functions
         async function fetchRandomTitle() {
@@ -501,6 +495,11 @@
         function ThemeProvider({ children }) {
             const [theme, setTheme] = useState(() => {
                 const saved = localStorage.getItem('wiki-journey-theme');
+                // Migrate 'classic' theme to 'light' if found
+                if (saved === 'classic') {
+                    localStorage.setItem('wiki-journey-theme', 'light');
+                    return 'light';
+                }
                 return saved || 'light';
             });
 
@@ -532,11 +531,10 @@
             const themes = [
                 { value: 'light', label: 'Light', icon: Sun },
                 { value: 'dark', label: 'Dark', icon: Moon },
-                { value: 'classic', label: 'Classic', icon: BookOpen },
             ];
 
             return (
-                <div className="flex items-center gap-2 p-1 rounded-lg border border-slate-200 bg-white dark:bg-gray-900 dark:border-gray-800 classic:bg-white classic:border-slate-400">
+                <div className="flex items-center gap-2 p-1 rounded-lg border border-slate-200 bg-white dark:bg-gray-900 dark:border-gray-800">
                     {themes.map(({ value, label, icon: Icon }) => (
                         <Button
                             key={value}
@@ -545,8 +543,8 @@
                             onClick={() => setTheme(value)}
                             className={`flex items-center gap-1.5 ${
                                 theme === value
-                                    ? 'bg-slate-900 text-white dark:bg-gray-800 dark:text-gray-100 classic:bg-blue-600 classic:text-white'
-                                    : 'text-slate-600 dark:text-gray-300 classic:text-slate-700 hover:bg-slate-100 dark:hover:bg-gray-800 classic:hover:bg-blue-50'
+                                    ? 'bg-slate-900 text-white dark:bg-gray-800 dark:text-gray-100'
+                                    : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-800'
                             }`}
                             title={label}
                         >

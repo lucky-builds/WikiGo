@@ -1,31 +1,28 @@
 import React from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, BookOpen } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 
-export function ThemeSwitcher({ hideClassic = false }) {
+export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
 
-  const allThemes = [
+  const themes = [
     { value: 'light', label: 'Light', icon: Sun },
     { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'classic', label: 'Classic', icon: BookOpen },
   ];
 
-  const themes = hideClassic ? allThemes.filter(t => t.value !== 'classic') : allThemes;
-
   return (
-    <div className="flex items-center gap-2 p-1 rounded-lg border border-slate-200 bg-white dark:bg-gray-900 dark:border-gray-800 classic:bg-white classic:border-slate-400">
+    <div className="flex items-center gap-1 p-1 rounded-lg border border-slate-200 bg-white dark:bg-gray-900 dark:border-gray-800 w-full max-w-xs">
       {themes.map(({ value, label, icon: Icon }) => (
         <Button
           key={value}
           variant={theme === value ? 'default' : 'ghost'}
           size="sm"
           onClick={() => setTheme(value)}
-          className={`flex items-center gap-1.5 ${
+          className={`flex-1 flex items-center justify-center gap-1.5 ${
             theme === value
-              ? 'bg-slate-900 text-white dark:bg-gray-800 dark:text-gray-100 classic:bg-blue-600 classic:text-white'
-              : 'text-slate-600 dark:text-gray-300 classic:text-slate-700 hover:bg-slate-100 dark:hover:bg-gray-800 classic:hover:bg-blue-50'
+              ? 'bg-slate-900 text-white dark:bg-gray-800 dark:text-gray-100'
+              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-800'
           }`}
           title={label}
         >

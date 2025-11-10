@@ -9,11 +9,12 @@ import { getStoredUsername } from './username';
  * @param {string} gameData.startTitle - Starting article title
  * @param {string} gameData.goalTitle - Goal article title
  * @param {boolean} gameData.isDailyChallenge - Whether it's a daily challenge
+ * @param {boolean} gameData.isZenMode - Whether it's a Zen Mode practice game
  * @param {string} gameData.startCategory - Starting category (if any)
  * @param {string} gameData.goalCategory - Goal category (if any)
  * @returns {Promise<string|null>} - Game session ID or null if tracking fails
  */
-export async function trackGameStart({ startTitle, goalTitle, isDailyChallenge, startCategory = null, goalCategory = null }) {
+export async function trackGameStart({ startTitle, goalTitle, isDailyChallenge = false, isZenMode = false, startCategory = null, goalCategory = null }) {
   try {
     const username = getStoredUsername() || 'anonymous';
     
@@ -25,6 +26,7 @@ export async function trackGameStart({ startTitle, goalTitle, isDailyChallenge, 
           start_title: startTitle,
           goal_title: goalTitle,
           is_daily_challenge: isDailyChallenge,
+          is_zen_mode: isZenMode,
           start_category: startCategory,
           goal_category: goalCategory,
           completed: false,
@@ -148,6 +150,37 @@ async function trackGameCompletionWithoutSession({ score, moves, timeMs, history
     return true;
   } catch (err) {
     console.error('Error tracking game completion (no session):', err);
+    return false;
+  }
+}
+
+/**
+ * Track when a Zen Mode game solution is viewed (forfeit)
+ * @param {string} gameSessionId - Game session ID from trackGameStart
+ * @returns {Promise<boolean>} - Success status
+ */
+export async function trackZenModeSolutionViewed(gameSessionId) {
+  if (!gameSessionId) {
+    return false;
+  }
+
+  try {
+    const { error } = await supabase
+      .from(GAME_ANALYTICS_TABLE)
+      .update({
+        solution_viewed: true,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', gameSessionId);
+
+    if (error) {
+      console.error('Error tracking Zen Mode solution viewed:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Error tracking Zen Mode solution viewed:', err);
     return false;
   }
 }

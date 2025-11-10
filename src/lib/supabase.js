@@ -17,4 +17,7 @@ export const DAILY_CHALLENGES_TABLE = 'daily_challenges'
 // Game analytics table name
 export const GAME_ANALYTICS_TABLE = 'game_analytics'
 
+// Practice games table name
+export const PRACTICE_GAMES_TABLE = 'practice_games'
+
 
