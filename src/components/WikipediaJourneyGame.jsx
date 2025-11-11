@@ -1302,14 +1302,14 @@ export default function WikipediaJourneyGame() {
 
   // --- UI ---
   return (
-    <div className={`w-full p-4 md:p-6 ${
+    <div className={`w-full p-4 md:p-6 lg:p-8 ${
       theme === 'dark' 
         ? 'bg-gray-950' 
         : theme === 'classic'
         ? 'bg-[#f5f5f0]'
         : 'bg-gradient-to-b from-slate-50 to-white'
     }`}>
-      <div className="mx-auto max-w-4xl space-y-4">
+      <div className="mx-auto max-w-4xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[90rem] space-y-4">
         <header className="flex flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="flex-shrink-0 min-w-0 flex items-center">
             <div className="flex items-center gap-2 sm:gap-3 flex-nowrap">
