@@ -507,11 +507,9 @@ export default function WikipediaJourneyGame() {
     try {
       setLoading(true);
       setError("");
-      const [sum, lks, html] = await Promise.all([
-        fetchSummary(title), 
-        fetchLinks(title),
-        fetchArticleHTML(title)
-      ]);
+      
+      // First fetch summary to get resolved title (handles redirects)
+      const sum = await fetchSummary(title);
       
       // Check if article exists (summary will be null for non-existent articles)
       if (!sum) {
@@ -520,11 +518,22 @@ export default function WikipediaJourneyGame() {
         return;
       }
       
+      // Detect redirect: if resolved title differs from requested title, it's a redirect
+      // Use resolved title for fetching links and HTML (not the redirect source)
+      const resolvedTitle = sum.title;
+      const [lks, html] = await Promise.all([
+        fetchLinks(resolvedTitle),
+        fetchArticleHTML(resolvedTitle)
+      ]);
+      
       setSummary(sum);
       setLinks(lks || []);
       setArticleHTML(html);
-      setCurrentTitle(sum.title);
-      if (pushHistory) setHistory((h) => [...h, sum.title]);
+      setCurrentTitle(resolvedTitle);
+      
+      // Only add resolved title to history (skip redirect sources)
+      // This ensures redirects don't count as separate steps
+      if (pushHistory) setHistory((h) => [...h, resolvedTitle]);
     } catch (e) {
       console.error('Error loading page:', e);
       setError("Couldn't load the page. Try another link.");
