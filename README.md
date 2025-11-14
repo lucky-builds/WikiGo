@@ -11,7 +11,7 @@ A fun and educational web game where players navigate from one Wikipedia article
 
 ## 🌐 Live Demo
 
-[Play WikiGo](https://wikigo.app) - Try the game online!
+[Play WikiGo](https://www.playwikigo.xyz) - Try the game online!
 
 ## ✨ Features
 
