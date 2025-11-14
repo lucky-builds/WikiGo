@@ -44,5 +44,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Advanced analytics
 - Tournament mode
 
-[1.0.0]: https://github.com/yourusername/wikigo/releases/tag/v1.0.0
+[1.0.0]: https://github.com/lucky-builds/WikiGo/releases/tag/v1.0.0
 

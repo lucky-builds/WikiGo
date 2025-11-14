@@ -59,8 +59,8 @@ Have an idea for a new feature? Open an issue using the [feature request templat
 
 1. Clone your fork:
    ```bash
-   git clone https://github.com/yourusername/wikigo.git
-   cd wikigo
+   git clone https://github.com/lucky-builds/WikiGo.git
+   cd WikiGo
    ```
 
 2. Install dependencies:

@@ -24,11 +24,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/wikigo.git"
+    "url": "https://github.com/lucky-builds/WikiGo.git"
   },
   "homepage": "https://www.playwikigo.xyz",
   "bugs": {
-    "url": "https://github.com/yourusername/wikigo/issues"
+    "url": "https://github.com/lucky-builds/WikiGo/issues"
   },
   "scripts": {
     "dev": "vite",

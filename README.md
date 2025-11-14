@@ -1,7 +1,7 @@
 # 🎮 WikiGo - Wikipedia Journey Game
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/yourusername/wikigo)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/lucky-builds/WikiGo)
 [![React](https://img.shields.io/badge/React-18.2.0-61dafb.svg)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-5.0.8-646CFF.svg)](https://vitejs.dev/)
 
@@ -61,8 +61,8 @@ A fun and educational web game where players navigate from one Wikipedia article
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/wikigo.git
-   cd wikigo
+   git clone https://github.com/lucky-builds/WikiGo.git
+   cd WikiGo
    ```
 
 2. **Install dependencies**
@@ -467,9 +467,9 @@ Future features and improvements planned:
 ## 📧 Support
 
 If you encounter any issues or have questions:
-- Open an [issue](https://github.com/yourusername/wikigo/issues) on GitHub
+- Open an [issue](https://github.com/lucky-builds/WikiGo/issues) on GitHub
 - Check existing issues for solutions
-- Review the [documentation](https://github.com/yourusername/wikigo/wiki)
+- Review the [documentation](https://github.com/lucky-builds/WikiGo/wiki)
 
 ---
 
