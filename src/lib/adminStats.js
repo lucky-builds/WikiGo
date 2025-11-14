@@ -480,27 +480,56 @@ export async function fetchTimeBasedTrends(period = 'daily', days = 30) {
  * Fetch latest game analytics matches
  * @param {number} limit - Number of matches to fetch (default: 10)
  * @param {string} filter - 'all', 'completed', or 'incomplete'
+ * @param {string} gameTypeFilter - 'all', 'daily', 'zen', or 'random'
  * @returns {Promise<Array>} Latest game analytics
  */
-export async function fetchLatestGameMatches(limit = 10, filter = 'all') {
+export async function fetchLatestGameMatches(limit = 10, filter = 'all', gameTypeFilter = 'all') {
   try {
+    // For random filter, fetch more results to account for client-side filtering
+    const fetchLimit = gameTypeFilter === 'random' ? limit * 3 : limit;
+    
     let query = supabase
       .from(GAME_ANALYTICS_TABLE)
       .select('*')
       .order('started_at', { ascending: false })
-      .limit(limit);
+      .limit(fetchLimit);
 
+    // Filter by completion status
     if (filter === 'completed') {
       query = query.eq('completed', true);
     } else if (filter === 'incomplete') {
       query = query.eq('completed', false);
     }
 
+    // Filter by game type
+    if (gameTypeFilter === 'daily') {
+      query = query.eq('is_daily_challenge', true);
+    } else if (gameTypeFilter === 'zen') {
+      query = query.eq('is_zen_mode', true);
+    }
+    // Note: For 'random', we don't filter at query level since we need AND logic
+    // We'll filter client-side after fetching
+
     const { data, error } = await query;
 
     if (error) throw error;
 
-    return data || [];
+    let results = data || [];
+
+    // Client-side filter for random games (neither daily nor zen)
+    if (gameTypeFilter === 'random') {
+      results = results.filter(
+        (game) => 
+          (!game.is_daily_challenge || game.is_daily_challenge === false) &&
+          (!game.is_zen_mode || game.is_zen_mode === false)
+      );
+      // Re-sort after filtering since we may have fetched more than needed
+      results.sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
+      // Limit to requested amount after filtering
+      results = results.slice(0, limit);
+    }
+
+    return results;
   } catch (error) {
     console.error('Error fetching latest game matches:', error);
     return [];

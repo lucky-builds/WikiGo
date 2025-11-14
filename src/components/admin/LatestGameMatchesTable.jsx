@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, Target, User, Calendar } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, Target, User, Calendar, Loader2 } from 'lucide-react';
 import { fetchLatestGameMatches } from '@/lib/adminStats';
 import { prettyTime } from '@/lib/timeUtils';
 
@@ -30,26 +30,54 @@ function formatDateTime(isoString) {
 export function LatestGameMatchesTable() {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [matches, setMatches] = useState([]);
   const [filter, setFilter] = useState('all'); // 'all', 'completed', 'incomplete'
+  const [gameTypeFilter, setGameTypeFilter] = useState('all'); // 'all', 'daily', 'zen', 'random'
   const [expandedRows, setExpandedRows] = useState(new Set());
+  const [currentLimit, setCurrentLimit] = useState(10);
+  const [hasMore, setHasMore] = useState(true);
+  const INCREMENT = 10; // Number of results to load per "Load More" click
 
-  const loadMatches = async () => {
-    setLoading(true);
+  const loadMatches = async (limit = currentLimit, isLoadMore = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     try {
-      const data = await fetchLatestGameMatches(10, filter);
+      const data = await fetchLatestGameMatches(limit, filter, gameTypeFilter);
       setMatches(data);
+      
+      // If we got fewer results than requested, we've reached the end
+      if (data.length < limit) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+      
+      setCurrentLimit(limit);
     } catch (error) {
       console.error('Error loading matches:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
+  const handleLoadMore = () => {
+    const newLimit = currentLimit + INCREMENT;
+    loadMatches(newLimit, true);
+  };
+
   React.useEffect(() => {
-    loadMatches();
+    // Reset state when filter changes
+    setCurrentLimit(10);
+    setHasMore(true);
+    setExpandedRows(new Set()); // Clear expanded rows when filter changes
+    loadMatches(10, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, gameTypeFilter]);
 
   const toggleRow = (id) => {
     const newExpanded = new Set(expandedRows);
@@ -94,35 +122,85 @@ export function LatestGameMatchesTable() {
   return (
     <Card className={`shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
       <CardHeader className="p-4 sm:p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
-          <CardTitle className={`text-lg sm:text-base font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-            Latest Game Matches
-          </CardTitle>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button
-              variant={filter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('all')}
-              className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
-            >
-              All
-            </Button>
-            <Button
-              variant={filter === 'completed' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('completed')}
-              className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
-            >
-              Completed
-            </Button>
-            <Button
-              variant={filter === 'incomplete' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('incomplete')}
-              className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
-            >
-              Incomplete
-            </Button>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
+            <CardTitle className={`text-lg sm:text-base font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+              Latest Game Matches
+            </CardTitle>
+          </div>
+          
+          {/* Completion Status Filters */}
+          <div className="flex flex-col gap-2">
+            <div className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>
+              Status:
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                variant={filter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('all')}
+                className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
+              >
+                All
+              </Button>
+              <Button
+                variant={filter === 'completed' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('completed')}
+                className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
+              >
+                Completed
+              </Button>
+              <Button
+                variant={filter === 'incomplete' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('incomplete')}
+                className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
+              >
+                Incomplete
+              </Button>
+            </div>
+          </div>
+
+          {/* Game Type Filters */}
+          <div className="flex flex-col gap-2">
+            <div className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>
+              Game Type:
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                variant={gameTypeFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setGameTypeFilter('all')}
+                className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
+              >
+                All
+              </Button>
+              <Button
+                variant={gameTypeFilter === 'daily' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setGameTypeFilter('daily')}
+                className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
+              >
+                Daily
+              </Button>
+              <Button
+                variant={gameTypeFilter === 'zen' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setGameTypeFilter('zen')}
+                className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
+              >
+                Zen
+              </Button>
+              <Button
+                variant={gameTypeFilter === 'random' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setGameTypeFilter('random')}
+                className="flex-1 sm:flex-none text-sm sm:text-xs min-h-[44px] sm:min-h-0"
+              >
+                Random
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -369,6 +447,38 @@ export function LatestGameMatchesTable() {
                 </div>
               );
             })}
+          </div>
+        )}
+        
+        {/* Load More Button */}
+        {matches.length > 0 && hasMore && (
+          <div className="flex justify-center mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <Button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              {loadingMore ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  Load More ({INCREMENT} more)
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+        
+        {/* Show message when all results are loaded */}
+        {matches.length > 0 && !hasMore && (
+          <div className="text-center mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>
+              All {matches.length} results displayed
+            </p>
           </div>
         )}
       </CardContent>
