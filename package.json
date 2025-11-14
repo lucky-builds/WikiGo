@@ -1,8 +1,35 @@
 {
   "name": "wikipedia-journey-game",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "A fun and educational web game where players navigate from one Wikipedia article to another using only internal links",
+  "keywords": [
+    "wikipedia",
+    "game",
+    "puzzle",
+    "challenge",
+    "navigation",
+    "quiz",
+    "education",
+    "react",
+    "vite",
+    "supabase",
+    "leaderboard",
+    "daily-challenge",
+    "zen-mode",
+    "practice-games"
+  ],
+  "author": "WikiGo Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/wikigo.git"
+  },
+  "homepage": "https://wikigo.app",
+  "bugs": {
+    "url": "https://github.com/yourusername/wikigo/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
